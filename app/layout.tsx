@@ -1,0 +1,62 @@
+import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
+
+const sans = localFont({
+  src: [
+    { path: "../public/fonts/be-vietnam-regular.woff2", weight: "400" },
+    { path: "../public/fonts/be-vietnam-semibold.woff2", weight: "600 800" },
+  ],
+  variable: "--font-be-vietnam",
+  display: "swap",
+});
+const serif = localFont({
+  src: "../public/fonts/dm-serif.woff2",
+  weight: "400",
+  variable: "--font-dm-serif",
+  display: "swap",
+});
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Cái Tiệm Sữa — Một chút ngọt lành",
+  description:
+    "Sữa tuyết mềm mịn, sữa tươi và topping nhà làm. Chọn món, đặt giao tận nơi, theo dõi đơn hàng ngay tại tiệm.",
+  robots: { index: true, follow: true },
+  appleWebApp: {
+    capable: true,
+    title: "Cái Tiệm Sữa",
+    statusBarStyle: "black-translucent",
+  },
+};
+export const viewport: Viewport = {
+  initialScale: 1,
+  maximumScale: 1,
+  minimumScale: 1,
+  userScalable: false,
+  themeColor: "#fcfbf8",
+  colorScheme: "light",
+  viewportFit: "cover",
+  width: "device-width",
+  interactiveWidget: "resizes-content",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html
+      lang="vi"
+      className={`${sans.variable} ${serif.variable} scroll-smooth scroll-pt-[110px] bg-paper [-webkit-text-size-adjust:100%] [text-size-adjust:100%] motion-reduce:scroll-auto mobile:scroll-pt-[calc(86px+env(safe-area-inset-top,0px))]`}
+      suppressHydrationWarning
+    >
+      <body
+        className="m-0 min-h-dvh bg-paper font-sans text-sm text-ink antialiased selection:bg-[#cce3e9] [&_:is(button,a,input,textarea)]:focus-visible:outline-3 [&_:is(button,a,input,textarea)]:focus-visible:outline-[#64aabc] [&_:is(button,a,input,textarea)]:focus-visible:outline-offset-4 [&_main]:overflow-clip mobile:text-[15px] mobile:before:fixed mobile:before:inset-x-0 mobile:before:top-0 mobile:before:z-21 mobile:before:h-[env(safe-area-inset-top,0px)] mobile:before:bg-paper mobile:before:content-[''] mobile:before:pointer-events-none mobile:[&_main]:pr-[env(safe-area-inset-right,0px)] mobile:[&_main]:pl-[env(safe-area-inset-left,0px)] touch:[&_input:not([type=checkbox]):not([type=radio])]:text-[max(16px,1em)] touch:[&_textarea]:text-[max(16px,1em)] touch:[&_select]:text-[max(16px,1em)] motion-reduce:[&_*]:animate-none! motion-reduce:[&_*]:transition-none! motion-reduce:[&_*::before]:animate-none! motion-reduce:[&_*::before]:transition-none! motion-reduce:[&_*::after]:animate-none! motion-reduce:[&_*::after]:transition-none!"
+        suppressHydrationWarning
+      >
+        {children}
+      </body>
+    </html>
+  );
+}
