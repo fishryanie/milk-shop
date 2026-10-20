@@ -43,6 +43,7 @@ import {
 import { ProductImage } from "./product-image";
 import { milkImage } from "@/lib/milk-image";
 import { DeliveryPolicy } from "./delivery-policy";
+import { FloatingFooter } from "./floating-footer";
 
 function SheetLoading() {
   return (
@@ -690,127 +691,125 @@ export function Storefront({
         <div className="mx-auto max-w-[1440px] px-[5.5vw] mb-[60px] mobile:px-3 mobile:mb-[30px]">
           <DeliveryPolicy />
         </div>
-
-      
       </main>
-      <footer className="flex justify-between gap-[30px] border-t border-line px-[5.5vw] pt-[35px] pb-[43px] [&>div>p]:flex [&>div>p]:items-center [&>div>p]:gap-[3px] [&>div>p]:text-[9px] [&>div>p]:leading-[2] [&>div>p]:text-muted [&>div:nth-child(2)>span]:font-serif [&>div:nth-child(2)>span]:text-[23px] [&>div:nth-child(2)>span]:leading-[1.3] [&>div:nth-child(2)>span]:text-[#789094] [&>div:nth-child(2)>a]:mt-3.5 [&>div:nth-child(2)>a]:block [&>div:nth-child(2)>a]:text-[10px] [&>div:last-child]:flex [&>div:last-child]:flex-col [&>div:last-child]:items-start [&>div:last-child]:gap-[11px] [&_button]:flex [&_button]:items-center [&_button]:gap-2 [&_button]:p-0 [&_button]:text-[10px] [&_small]:mt-2.5 [&_small]:text-[8px] [&_small]:text-muted wide:px-[max(5.5vw,calc((100vw-1280px)/2))] mobile:grid mobile:grid-cols-1 mobile:gap-6 mobile:pt-7 mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pb-[calc(112px+env(safe-area-inset-bottom,0px))] mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:[&>div>p]:text-xs mobile:[&>div:nth-child(2)>a]:flex mobile:[&>div:nth-child(2)>a]:h-10 mobile:[&>div:nth-child(2)>a]:min-h-10 mobile:[&>div:nth-child(2)>a]:items-center mobile:[&>div:nth-child(2)>a]:text-[13px] mobile:[&>div:last-child]:gap-1 mobile:[&_button]:min-h-10 mobile:[&_button]:text-[13px] mobile:[&_small]:mt-3 mobile:[&_small]:text-[11px] mobile:[&_small]:leading-[1.7]">
-        <div>
-          <a
-            className="flex items-center gap-3.5 font-serif text-[25px] [&_svg]:text-blue mobile:gap-3 mobile:text-[26px]"
-            href="#"
-          >
-            {settings.name}
-            <Droplet size={22} />
-          </a>
-          <p>{settings.tagline}</p>
-          {address && (
-            <p className="flex flex-col items-start justify-start">
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-muted hover:text-blue hover:underline transition-colors"
-                title="Mở Google Maps: 748/30 Thống Nhất, An Hội Đông, Hồ Chí Minh"
-              >
-                <MapPin size={13} className="shrink-0 text-blue" />
-                <span>{address}</span>
-              </a>
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-blue hover:text-blue-dark hover:underline"
-              >
-                <span>Mở trên Google Maps</span>
-                <ArrowUpRight size={14} />
-              </a>
+      <footer
+        id="contact"
+        className="border-t border-line bg-paper/60 px-[5.5vw] pt-9 pb-11 wide:px-[max(5.5vw,calc((100vw-1280px)/2))] mobile:px-4 mobile:pt-7 mobile:pb-[66px]"
+      >
+        <div className="mx-auto flex flex-col justify-between gap-8 md:flex-row tablet:gap-6 mobile:flex-col mobile:gap-7">
+          {/* Cột 1: Thông tin tiệm & Bản đồ */}
+          <div className="flex flex-col items-start max-w-[340px]">
+            <a
+              className="inline-flex items-center gap-2.5 font-serif text-[26px] text-ink hover:text-blue transition-colors"
+              href="#"
+            >
+              <span>{settings.name}</span>
+              <Droplet size={22} className="text-blue" />
+            </a>
+            <p className="mt-1 text-xs text-muted leading-relaxed">
+              {settings.tagline}
             </p>
-          )}
-        </div>
-        <div>
-          {settings.phone && (
-            <a href={`tel:${settings.phone}`}>Gọi tiệm · {settings.phone}</a>
-          )}
-        </div>
-        <div>
-          <button
-            className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink rounded-lg"
-            onClick={() => setModal("tour")}
-          >
-            <HelpCircle size={15} /> Hướng dẫn đặt hàng
-          </button>
-          <button
-            className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink rounded-lg"
-            onClick={() => {
-              setNewOrder(undefined);
-              setModal("orders");
-            }}
-          >
-            <Clock3 size={15} /> Theo dõi đơn của tôi
-          </button>
-          <small>
-            © {new Date().getFullYear()} {settings.name}
-          </small>
+            {address && (
+              <div className="mt-2 flex w-full flex-col items-start gap-1">
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group/addr inline-flex items-start gap-1.5 text-xs font-semibold text-blue hover:text-blue transition-colors"
+                  title={`Mở Google Maps: ${address}`}
+                >
+                  <MapPin
+                    size={14}
+                    className="mt-0.5 shrink-0 text-blue group-hover/addr:scale-110 transition-transform"
+                  />
+                  <span className="leading-snug">{address}</span>
+                </a>
+             
+                {/* Map nhỏ dưới chữ mở trên google map */}
+                <div className="relative mt-2 w-full max-w-[340px] h-[145px] overflow-hidden rounded-xl border border-line bg-[#eaf0f2] shadow-[0_2px_8px_#203d450a] transition-all hover:border-blue/50 hover:shadow-md">
+                  <iframe
+                    src={embedUrl}
+                    width="100%"
+                    height="145"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title={`Bản đồ vị trí ${settings.name}`}
+                    className="h-full w-full block"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Cột 2: Liên hệ & Thời gian phục vụ */}
+          <div className="flex flex-col items-start gap-3 md:max-w-[280px]">
+            <span className="text-[11px] font-semibold tracking-wider text-muted uppercase">
+              Liên hệ tiệm
+            </span>
+            {settings.phone ? (
+              <a
+                href={`tel:${settings.phone}`}
+                className="inline-flex items-center gap-2 rounded-lg border border-line bg-paper-light px-3.5 py-2 text-xs font-medium text-ink hover:border-blue/40 hover:text-blue hover:shadow-xs transition-all active:scale-[0.98]"
+              >
+                <Phone size={14} className="text-blue" />
+                <span>
+                  Gọi tiệm: <strong>{settings.phone}</strong>
+                </span>
+              </a>
+            ) : null}
+
+            {settings.deliveryNote && (
+              <div className="flex items-start gap-2 rounded-lg bg-blue-light/50 p-2.5 text-[11px] text-[#285d6b] leading-snug">
+                <Truck size={14} className="mt-0.5 shrink-0 text-blue" />
+                <span>{settings.deliveryNote}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Cột 3: Hỗ trợ & Theo dõi đơn */}
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            <span className="text-[11px] font-semibold tracking-wider text-muted uppercase mb-1 md:self-end">
+              Tiện ích
+            </span>
+            <button
+              type="button"
+              className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-9 px-3 inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink hover:bg-paper-light rounded-lg border border-transparent hover:border-line"
+              onClick={() => setModal("tour")}
+            >
+              <HelpCircle size={15} className="text-blue" /> Hướng dẫn đặt hàng
+            </button>
+            <button
+              type="button"
+              className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-9 px-3 inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink hover:bg-paper-light rounded-lg border border-transparent hover:border-line"
+              onClick={() => {
+                setNewOrder(undefined);
+                setModal("orders");
+              }}
+            >
+              <Clock3 size={15} className="text-blue" /> Theo dõi đơn của tôi
+            </button>
+            <small className="mt-4 text-[11px] text-muted md:text-right">
+              © {new Date().getFullYear()} {settings.name}. Mọi quyền được bảo
+              lưu.
+            </small>
+          </div>
         </div>
       </footer>
-      {count > 0 && !modal && !selected && (
-        <button
-          className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] fixed right-6 bottom-3.5 z-22 flex h-10 min-h-10 animate-slide-in items-center gap-2.5 rounded-[20px] bg-blue px-3.5 text-white shadow-[0_7px_25px_#234b5d2e] [&>span:nth-child(2)]:text-left [&>span:nth-child(2)]:text-xs [&_small]:mt-0.5 [&_small]:block [&_small]:text-[8px] [&_small]:opacity-70 [&_strong]:ml-3 [&_strong]:text-[13px] active:translate-y-0.5 active:scale-95 active:brightness-[.92] active:shadow-[0_4px_15px_#234b5d59] mobile:hidden"
-          onClick={() => setModal("cart")}
-        >
-          <span className="grid h-[26px] min-w-[26px] place-items-center rounded-xl bg-white/14 px-1.5 text-[11px] font-bold">
-            {count}
-          </span>
-          <span>
-            Xem giỏ hàng<small>Kiểm tra món & đặt hàng</small>
-          </span>
-          <strong>{money(approximate)}</strong>
-          <ArrowRight size={18} />
-        </button>
-      )}
-      {!modal && !selected && !showTour && (
-        <nav
-          className="hidden mobile:fixed mobile:inset-x-0 mobile:bottom-0 mobile:z-22 mobile:grid mobile:grid-cols-[58px_64px_minmax(0,1fr)] mobile:items-stretch mobile:gap-2.5 mobile:border-t mobile:border-line mobile:bg-paper/98 mobile:pt-2 mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pb-[calc(8px+env(safe-area-inset-bottom,0px))] mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:shadow-[0_-5px_24px_#203d4508]"
-          aria-label="Điều hướng mua hàng"
-        >
-          <a
-            href="#menu"
-            className="relative overflow-hidden select-none flex h-10 min-h-10 flex-col items-center justify-center gap-0.5 rounded-lg p-0 text-[10px] text-muted active:translate-y-px active:scale-90 active:bg-blue-light"
-          >
-            <Milk size={21} strokeWidth={1.6} />
-            <span>Thực đơn</span>
-          </a>
-          <button
-            className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative flex h-10 min-h-10 flex-col items-center justify-center gap-0.5 rounded-lg p-0 text-[10px] text-muted active:translate-y-px active:scale-90 active:bg-blue-light"
-            onClick={() => {
-              setNewOrder(undefined);
-              setModal("orders");
-            }}
-          >
-            <Clock3 size={21} strokeWidth={1.6} />
-            <span>Đơn đã đặt</span>
-          </button>
-          <button
-            className={`cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px flex h-10 min-h-10 min-w-0 items-center justify-between gap-[9px] rounded-lg bg-blue-light px-3 text-left text-blue [&>svg]:shrink-0 [&>span]:min-w-0 [&>span]:flex-1 [&>span]:text-[13px] [&>span]:leading-[1.6] [&>span]:font-semibold [&_strong]:block [&_strong]:text-[13px] [&_strong]:leading-[1.2] [&_strong]:font-semibold [&_strong]:whitespace-nowrap active:scale-[.96] active:brightness-[.94] tiny:gap-1.5 tiny:px-[9px] tiny:[&>svg:last-child]:hidden ${count ? "bg-blue! text-white! [&>span]:text-[11px]!" : ""}`}
-            onClick={() => setModal("cart")}
-            aria-label={`Xem giỏ hàng, ${count} món`}
-          >
-            <ShoppingBag size={20} strokeWidth={1.6} />
-            {count ? (
-              <span>
-                {count} món trong giỏ
-                <strong>{money(approximate)}</strong>
-              </span>
-            ) : (
-              <span>Giỏ hàng</span>
-            )}
-            <ArrowRight size={18} />
-          </button>
-        </nav>
-      )}
+      <FloatingFooter
+        count={count}
+        approximate={approximate}
+        visible={!modal && !selected}
+        showTour={showTour}
+        onOpenCart={() => setModal("cart")}
+        onOpenOrders={() => {
+          setNewOrder(undefined);
+          setModal("orders");
+        }}
+      />
       {toast && (
         <div
-          className="fixed bottom-[105px] left-1/2 z-100 flex -translate-x-1/2 items-center gap-2.5 rounded-md bg-ink px-[18px] py-3 text-[11px] whitespace-nowrap text-white shadow-[0_3px_20px_#203d451a] mobile:bottom-[calc(92px+env(safe-area-inset-bottom,0px))] mobile:w-max mobile:max-w-[calc(100vw-24px)] mobile:px-4 mobile:text-[13px] mobile:leading-[1.6] mobile:whitespace-normal mobile:[&_svg]:shrink-0"
+          className="fixed bottom-[105px] left-1/2 z-100 flex -translate-x-1/2 items-center gap-2.5 rounded-md bg-ink px-[18px] py-3 text-[11px] whitespace-nowrap text-white shadow-[0_3px_20px_#203d451a] mobile:bottom-[58px] mobile:w-max mobile:max-w-[calc(100vw-24px)] mobile:px-4 mobile:text-[13px] mobile:leading-[1.6] mobile:whitespace-normal mobile:[&_svg]:shrink-0"
           role="status"
         >
           <Check size={17} />

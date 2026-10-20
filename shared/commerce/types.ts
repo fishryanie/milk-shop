@@ -45,9 +45,8 @@ export type ShopSettings = {
 export const defaultSettings: ShopSettings = {
   name: "Cái Tiệm Sữa",
   tagline: "Tươi ngon mỗi ngày, giao tận tay bạn.",
-  description:
-    "Một chút béo thơm, một chút ngọt lành. Chọn món bạn thích, tiệm chuẩn bị cho bạn.",
-  phone: "",
+  description:"",
+  phone: "0979955925",
   address: "748/30 Thống Nhất, An Hội Đông, Hồ Chí Minh",
   isOpen: true,
   deliveryFee: 0,
