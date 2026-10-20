@@ -1,7 +1,49 @@
 "use client";
 import { Button } from "./button";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode, type RefObject } from "react";
 import { X } from "lucide-react";
+
+// Keep the native dialog (focus trap + scroll lock) alive through its exit.
+export function useModalMotion(onClose: () => void) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const cleanupExit = useRef<(() => void) | undefined>(undefined);
+  useEffect(() => () => cleanupExit.current?.(), []);
+
+  function dismiss(after = onClose) {
+    const dialog = dialogRef.current;
+    if (!dialog || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      after();
+      return;
+    }
+    if (dialog.dataset.closing === "true") return;
+    const current = getComputedStyle(dialog);
+    dialog.style.setProperty("--modal-exit-from", current.transform);
+    dialog.style.setProperty("--modal-exit-from-opacity", current.opacity);
+    dialog.dataset.closing = "true";
+    dialog.inert = true;
+    const finish = () => {
+      cleanupExit.current?.();
+      cleanupExit.current = undefined;
+      after();
+    };
+    const onEnd = (event: AnimationEvent) => {
+      if (event.target === dialog && !event.pseudoElement && event.animationName === "modal-exit") finish();
+    };
+    dialog.addEventListener("animationend", onEnd);
+    // Fallback for browsers that skip animationend; duration follows the CSS breakpoint.
+    const duration = Math.max(...getComputedStyle(dialog).animationDuration.split(",").map((value) =>
+      parseFloat(value) * (value.trim().endsWith("ms") ? 1 : 1000),
+    ));
+    const timer = setTimeout(finish, duration + 80);
+    cleanupExit.current = () => {
+      clearTimeout(timer);
+      dialog.removeEventListener("animationend", onEnd);
+    };
+  }
+
+  return { dialogRef, dismiss };
+}
+
 export function Modal({
   title,
   eyebrow,
@@ -11,6 +53,7 @@ export function Modal({
   busy = false,
   compact = false,
   footer,
+  dialogRef,
 }: {
   title: string;
   eyebrow?: string;
@@ -20,12 +63,22 @@ export function Modal({
   busy?: boolean;
   compact?: boolean;
   footer?: ReactNode;
+  dialogRef?: RefObject<HTMLDialogElement | null>;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
+  const motion = useModalMotion(onClose);
+  const ref = dialogRef ?? motion.dialogRef;
+  const dismiss = dialogRef ? onClose : () => motion.dismiss();
   const id = useId();
   useEffect(() => {
     const dialog = ref.current;
+    dialog?.setAttribute("data-motion", "preparing");
     dialog?.showModal();
+    // Start after the dialog joins the top layer, including mobile Safari.
+    let enterFrame = requestAnimationFrame(() => {
+      enterFrame = requestAnimationFrame(() => {
+        if (dialog?.dataset.closing !== "true") dialog?.setAttribute("data-motion", "enter");
+      });
+    });
     const body = document.body;
     const scrollX = window.scrollX;
     const scrollY = window.scrollY;
@@ -85,6 +138,7 @@ export function Modal({
     window.addEventListener("resize", resize);
     dialog?.addEventListener("focusin", resize);
     return () => {
+      cancelAnimationFrame(enterFrame);
       cancelAnimationFrame(frame);
       viewport?.removeEventListener("resize", resize);
       viewport?.removeEventListener("scroll", resize);
@@ -98,15 +152,15 @@ export function Modal({
       else body.style.removeProperty("--scroll-lock-y");
       window.scrollTo({ left: scrollX, top: scrollY, behavior: "instant" });
     };
-  }, []);
+  }, [ref]);
   return (
     <dialog
       ref={ref}
-      className={`group/sheet m-auto w-[calc(100%-36px)] max-w-[590px] max-h-[min(90dvh,var(--sheet-height,90dvh))] overflow-hidden overscroll-contain rounded-[13px] border-0 bg-paper p-0 text-ink shadow-[0_20px_90px_#183a4a40] backdrop:bg-[#1a333a7a] backdrop:backdrop-blur-[5px] mobile:fixed mobile:inset-x-0 mobile:top-auto mobile:bottom-[var(--sheet-offset,0px)] mobile:m-0 mobile:w-full mobile:max-w-full mobile:max-h-[calc(var(--sheet-height,100dvh)-env(safe-area-inset-top,0px)-8px)] mobile:rounded-[18px_18px_0_0] ${wide ? "max-w-[700px] mobile:max-w-full" : ""}`}
+      className={`shop-modal group/sheet m-auto w-[calc(100%-36px)] max-w-[590px] max-h-[min(90dvh,var(--sheet-height,90dvh))] overflow-hidden overscroll-contain rounded-[13px] border-0 bg-paper p-0 text-ink shadow-[0_20px_90px_#183a4a40] backdrop:bg-[#1a333a7a] backdrop:backdrop-blur-[5px] mobile:fixed mobile:inset-x-0 mobile:top-auto mobile:bottom-[var(--sheet-offset,0px)] mobile:m-0 mobile:w-full mobile:max-w-full mobile:max-h-[calc(var(--sheet-height,100dvh)-env(safe-area-inset-top,0px)-8px)] mobile:rounded-[18px_18px_0_0] ${wide ? "max-w-[700px] mobile:max-w-full" : ""}`}
       aria-labelledby={id}
       onCancel={(e) => {
         e.preventDefault();
-        if (!busy) onClose();
+        if (!busy) dismiss();
       }}
     >
       <div className="flex max-h-[inherit] flex-col">
@@ -126,7 +180,7 @@ export function Modal({
           </div>
           <Button
             variant="icon"
-            onClick={onClose}
+            onClick={dismiss}
             disabled={busy}
             aria-label="Đóng"
           >

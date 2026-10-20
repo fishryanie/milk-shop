@@ -9,7 +9,7 @@ import {
   ShoppingBag,
   ScanLine,
 } from "lucide-react";
-import { Modal } from "./modal";
+import { Modal, useModalMotion } from "./modal";
 const steps = [
   {
     icon: Heart,
@@ -37,13 +37,15 @@ const steps = [
   },
 ];
 export function Tour({ onClose }: { onClose: () => void }) {
+  const { dialogRef, dismiss } = useModalMotion(onClose);
   const [step, setStep] = useState(0);
   const item = steps[step];
   const Icon = item.icon;
   return (
     <Modal
+      dialogRef={dialogRef}
       title="Một vòng quanh tiệm"
-      onClose={onClose}
+      onClose={() => dismiss()}
       footer={
         <div className="text-center [&>button:last-child]:mx-auto [&>button:last-child]:mt-2">
           <div
@@ -64,7 +66,7 @@ export function Tour({ onClose }: { onClose: () => void }) {
             variant="primary"
             className="w-full"
             onClick={() =>
-              step === steps.length - 1 ? onClose() : setStep((s) => s + 1)
+              step === steps.length - 1 ? dismiss() : setStep((s) => s + 1)
             }
           >
             {step === steps.length - 1 ? "Mình chọn món thôi!" : "Tiếp theo"}
@@ -74,13 +76,13 @@ export function Tour({ onClose }: { onClose: () => void }) {
               <ArrowRight size={18} />
             )}
           </Button>
-          <Button variant="text" onClick={onClose}>
+          <Button variant="text" onClick={() => dismiss()}>
             Mình tự khám phá nhé
           </Button>
         </div>
       }
     >
-      <div className="flex flex-col items-center px-[34px] pt-[18px] pb-7 text-center [&>p:first-of-type]:mt-[5px] [&>p:first-of-type]:text-[8px] [&_h3]:mt-[7px] [&_h3]:mb-3.5 [&_h3]:max-w-[340px] [&_h3]:font-serif [&_h3]:text-[29px] [&_h3]:leading-[1.3] [&>p:last-child]:max-w-[360px] [&>p:last-child]:text-xs [&>p:last-child]:leading-[1.95] [&>p:last-child]:text-muted mobile:px-[22px] mobile:pt-3 mobile:pb-6 mobile:[&>p:first-of-type]:text-[10px] mobile:[&>p:first-of-type]:leading-[1.7] mobile:[&_h3]:leading-[1.25] mobile:[&>p:last-child]:text-sm mobile:[&>p:last-child]:leading-[1.85] short:[&_h3]:text-[25px]">
+      <div key={step} className="animate-slide-in flex flex-col items-center px-[34px] pt-[18px] pb-7 text-center [&>p:first-of-type]:mt-[5px] [&>p:first-of-type]:text-[8px] [&_h3]:mt-[7px] [&_h3]:mb-3.5 [&_h3]:max-w-[340px] [&_h3]:font-serif [&_h3]:text-[29px] [&_h3]:leading-[1.3] [&>p:last-child]:max-w-[360px] [&>p:last-child]:text-xs [&>p:last-child]:leading-[1.95] [&>p:last-child]:text-muted mobile:px-[22px] mobile:pt-3 mobile:pb-6 mobile:[&>p:first-of-type]:text-[10px] mobile:[&>p:first-of-type]:leading-[1.7] mobile:[&_h3]:leading-[1.25] mobile:[&>p:last-child]:text-sm mobile:[&>p:last-child]:leading-[1.85] short:[&_h3]:text-[25px]">
         <div className="relative grid h-[180px] w-[200px] place-items-center text-blue [&>svg]:relative [&>svg]:z-1 [&>svg]:rotate-[-7deg] mobile:h-[145px] mobile:w-[180px] short:mb-2 short:h-[70px] short:w-[150px] short:[&>svg]:size-12">
           <div className="absolute inset-x-[23px] inset-y-3 z-0 rotate-[-20deg] rounded-full bg-[#e7f0f0]" />
           <Icon size={62} strokeWidth={1.15} />

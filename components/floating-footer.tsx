@@ -5,6 +5,7 @@ import { money } from "@/shared/commerce/types";
 
 export interface FloatingFooterProps {
   count: number;
+  orderCount: number;
   approximate: number;
   onOpenCart: () => void;
   onOpenOrders: () => void;
@@ -14,6 +15,7 @@ export interface FloatingFooterProps {
 
 export function FloatingFooter({
   count,
+  orderCount,
   approximate,
   onOpenCart,
   onOpenOrders,
@@ -33,7 +35,7 @@ export function FloatingFooter({
           onClick={onOpenCart}
         >
           <span className="grid h-[26px] min-w-[26px] place-items-center rounded-xl bg-white/14 px-1.5 text-[11px] font-bold">
-            {count}
+            <span key={count} className="cart-count inline-block">{count}</span>
           </span>
           <span>
             Xem giỏ hàng<small>Kiểm tra món & đặt hàng</small>
@@ -48,13 +50,13 @@ export function FloatingFooter({
           ========================================================= */}
       {!showTour && (
         <nav
-          className="hidden mobile:fixed mobile:inset-x-0 mobile:bottom-0 mobile:z-22 mobile:grid mobile:grid-cols-[58px_64px_minmax(0,1fr)] mobile:items-stretch mobile:gap-2.5 mobile:border-t mobile:border-line mobile:bg-paper/98 mobile:pt-1 mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pb-[max(2px,env(safe-area-inset-bottom,0px))] mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:shadow-[0_-5px_24px_#203d4508]"
+          className="hidden mobile:fixed mobile:inset-x-0 mobile:bottom-0 mobile:z-22 mobile:grid mobile:grid-cols-[58px_64px_minmax(0,1fr)] mobile:items-stretch mobile:gap-2.5 mobile:border-t mobile:border-line mobile:bg-paper/98 mobile:pt-2 mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pb-[max(2px,env(safe-area-inset-bottom,0px))] mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:shadow-[0_-5px_24px_#203d4508]"
           aria-label="Điều hướng mua hàng"
         >
           {/* Nút 1: Thực đơn */}
           <a
             href="#menu"
-            className="relative overflow-hidden select-none flex h-10 min-h-10 flex-col items-center justify-center gap-0.5 rounded-lg p-0 text-[10px] text-muted active:translate-y-px active:scale-90 active:bg-blue-light"
+            className="relative overflow-hidden select-none flex h-11 min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg p-0 text-[10px] text-muted active:translate-y-px active:scale-90 active:bg-blue-light"
           >
             <Milk size={21} strokeWidth={1.6} />
             <span>Thực đơn</span>
@@ -62,20 +64,32 @@ export function FloatingFooter({
 
           {/* Nút 2: Đơn đã đặt */}
           <button
-            className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative flex h-10 min-h-10 flex-col items-center justify-center gap-0.5 rounded-lg p-0 text-[10px] text-muted active:translate-y-px active:scale-90 active:bg-blue-light"
+            className="cursor-pointer overflow-visible select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative flex h-11 min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg p-0 text-[10px] text-muted active:translate-y-px active:scale-90 active:bg-blue-light"
             onClick={onOpenOrders}
+            aria-label={`Đơn đã đặt, ${orderCount} đơn đang xử lý`}
           >
-            <Clock3 size={21} strokeWidth={1.6} />
+            <span className="relative inline-flex">
+              <Clock3 size={21} strokeWidth={1.6} />
+              {orderCount > 0 && (
+                <span
+                  key={orderCount}
+                  aria-hidden="true"
+                  className="cart-count absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red px-1 text-[9px] font-bold leading-none text-white ring-2 ring-paper"
+                >
+                  {orderCount > 99 ? "99+" : orderCount}
+                </span>
+              )}
+            </span>
             <span>Đơn đã đặt</span>
           </button>
 
           {/* Nút 3: Giỏ hàng */}
           <button
-            className={`cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px flex h-10 min-h-10 min-w-0 items-center justify-between gap-[9px] rounded-lg px-3 text-left [&>svg]:shrink-0 [&>span]:min-w-0 [&>span]:flex-1 [&>span]:text-[13px] [&>span]:leading-[1.6] [&>span]:font-semibold [&_strong]:block [&_strong]:text-[13px] [&_strong]:leading-[1.2] [&_strong]:font-semibold [&_strong]:whitespace-nowrap active:scale-[.96] active:brightness-[.94] tiny:gap-1.5 tiny:px-[9px] tiny:[&>svg:last-child]:hidden bg-blue text-white ${count ? " text-white! [&>span]:text-[11px]!" : ""}`}
+            className={`cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px flex h-11 min-h-11 min-w-0 items-center justify-between gap-[9px] rounded-lg px-3 text-left [&>svg]:shrink-0 [&>span]:min-w-0 [&>span]:flex-1 [&>span]:text-[13px] [&>span]:leading-[1.6] [&>span]:font-semibold [&_strong]:block [&_strong]:text-[13px] [&_strong]:leading-[1.2] [&_strong]:font-semibold [&_strong]:whitespace-nowrap active:scale-[.96] active:brightness-[.94] tiny:gap-1.5 tiny:px-[9px] tiny:[&>svg:last-child]:hidden bg-blue text-white ${count ? " text-white! [&>span]:text-[11px]!" : ""}`}
             onClick={onOpenCart}
             aria-label={`Xem giỏ hàng, ${count} món`}
           >
-            <ShoppingBag size={20} strokeWidth={1.6} />
+            <span key={count} className="cart-count inline-flex shrink-0 !flex-none"><ShoppingBag size={20} strokeWidth={1.6} /></span>
             {count ? (
               <span>
                 {count} món trong giỏ

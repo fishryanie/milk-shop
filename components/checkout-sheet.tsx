@@ -1,18 +1,32 @@
 "use client";
 import { Button } from "./button";
-import { useActionState, useEffect, useId, useRef, useState } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import {
   ArrowLeft,
   ArrowRight,
   Banknote,
   LocateFixed,
+  LoaderCircle,
   MapPin,
   QrCode,
   ShieldCheck,
 } from "lucide-react";
-import { Modal } from "./modal";
+import { Modal, useModalMotion } from "./modal";
 import { DeliveryPolicy } from "./delivery-policy";
-import { api, ApiError, readSaved, saveLocal } from "@/lib/client";
+import {
+  api,
+  ApiError,
+  newCheckoutKey,
+  readSaved,
+  saveLocal,
+} from "@/lib/client";
 import {
   money,
   type CartLine,
@@ -46,6 +60,7 @@ export function CheckoutSheet({
   onSuccess: (order: ShopOrder) => void;
   onChanged: () => void;
 }) {
+  const { dialogRef, dismiss } = useModalMotion(onClose);
   const formId = useId();
   const [customer, setCustomer] = useState<Customer>(blank);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
@@ -72,33 +87,24 @@ export function CheckoutSheet({
           }),
         });
         saveLocal("milk-checkout-key", "");
-        onSuccess(order);
+        dismiss(() => onSuccess(order));
         return null;
       } catch (err) {
-        if (err instanceof ApiError && err.code === "CART_CHANGED") onChanged();
+        if (err instanceof ApiError && err.code === "CART_CHANGED")
+          dismiss(onChanged);
         return err instanceof Error ? err.message : "Chưa đặt được đơn.";
       }
     },
     null,
   );
 
-  useEffect(() => {
-    const saved = readSaved<Customer>("milk-customer", blank);
-    setCustomer({ ...blank, ...saved, location: null });
-    key.current =
-      readSaved<string>("milk-checkout-key", "") || crypto.randomUUID();
-    saveLocal("milk-checkout-key", key.current);
-    setReady(true);
-    return () => {
-      locationGeneration.current++;
-    };
-  }, []);
-  useEffect(() => {
-    if (ready) saveLocal("milk-customer", { ...customer, location: null });
-  }, [customer, ready]);
-  const field = (name: keyof Omit<Customer, "location">, value: string) =>
-    setCustomer((c) => ({ ...c, [name]: value }));
-  function locate() {
+  const locate = useCallback(() => {
+    if (!window.isSecureContext) {
+      setLocationState(
+        "Chưa thể lấy vị trí trên kết nối này. Bạn nhập địa chỉ đầy đủ để tiệm giao hàng nhé.",
+      );
+      return;
+    }
     if (!navigator.geolocation) {
       setLocationState(
         "Trình duyệt chưa hỗ trợ định vị. Bạn có thể nhập địa chỉ để tiếp tục.",
@@ -133,12 +139,36 @@ export function CheckoutSheet({
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
     );
+  }, []);
+  useEffect(() => {
+    const saved = readSaved<Customer>("milk-customer", blank);
+    setCustomer({ ...blank, ...saved, location: null });
+    key.current =
+      readSaved<string>("milk-checkout-key", "") || newCheckoutKey();
+    saveLocal("milk-checkout-key", key.current);
+    setReady(true);
+    locate();
+    return () => {
+      locationGeneration.current++;
+    };
+  }, [locate]);
+  useEffect(() => {
+    if (ready) saveLocal("milk-customer", { ...customer, location: null });
+  }, [customer, ready]);
+  const field = (name: keyof Omit<Customer, "location">, value: string) =>
+    setCustomer((c) => ({ ...c, [name]: value }));
+  function clearLocation() {
+    locationGeneration.current++;
+    setLocating(false);
+    setCustomer((c) => ({ ...c, location: null }));
+    setLocationState("Tiệm sẽ giao theo địa chỉ bạn nhập ở trên.");
   }
   return (
     <Modal
+      dialogRef={dialogRef}
       title="Tiệm giao đến đâu?"
       eyebrow="Chỉ một bước nhỏ nữa thôi"
-      onClose={onClose}
+      onClose={() => dismiss()}
       busy={isPending}
       footer={
         <div className="[&>div[role=alert]]:mt-0 [&>div[role=alert]]:mb-3 [&>div[role=alert]]:max-h-[25dvh] [&>div[role=alert]]:overflow-y-auto landscape:[&_small]:hidden mobile:group-data-[compact=true]/sheet:[&_small]:hidden">
@@ -158,7 +188,7 @@ export function CheckoutSheet({
             <Button
               variant="secondary"
               type="button"
-              onClick={onBack}
+              onClick={() => dismiss(onBack)}
               disabled={isPending}
             >
               <ArrowLeft size={18} />
@@ -168,27 +198,30 @@ export function CheckoutSheet({
               variant="primary"
               type="submit"
               form={formId}
-              disabled={isPending || !ready}
+              aria-busy={isPending}
+              disabled={isPending || !ready || locating}
             >
               {isPending
                 ? "Tiệm đang nhận đơn…"
-                : paymentMethod === "cod"
-                  ? "Đặt hàng (Thanh toán khi nhận)"
-                  : "Đặt hàng & Chuyển khoản"}
-              <ArrowRight size={18} />
+                : locating
+                  ? "Đang lấy vị trí…"
+                  : paymentMethod === "cod"
+                    ? "Đặt hàng"
+                    : "Đặt hàng"}
+              {isPending || locating ? (
+                <LoaderCircle size={18} className="animate-spin" />
+              ) : (
+                <ArrowRight size={18} />
+              )}
             </Button>
           </div>
-          <small className="mt-3 flex items-start justify-center gap-1.5 text-[9px] leading-[1.8] text-[#8a999d] [&_svg]:mt-px [&_svg]:shrink-0 mobile:justify-start mobile:gap-[7px] mobile:text-left mobile:text-[11px] mobile:leading-[1.7]">
-            <ShieldCheck size={14} />
-            Thông tin giao hàng chỉ dành cho tiệm. Không cần tạo tài khoản.
-          </small>
         </div>
       }
     >
       <form
         id={formId}
         action={formAction}
-        className="px-7 pt-[23px] pb-7 [&>p]:mb-[23px] [&>p]:text-[11px] [&>p]:leading-[1.9] [&>p]:text-muted [&_label]:mb-[18px] [&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label]:text-[11px] [&_label]:font-semibold [&_input]:min-h-[45px] [&_input]:w-full [&_input]:resize-y [&_input]:rounded-[5px] [&_input]:border [&_input]:border-[#cedcde] [&_input]:bg-white [&_input]:px-3 [&_input]:py-[13px] [&_input]:text-xs [&_input]:leading-[1.6] [&_input]:font-normal [&_input]:text-ink [&_textarea]:min-h-[45px] [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-[5px] [&_textarea]:border [&_textarea]:border-[#cedcde] [&_textarea]:bg-white [&_textarea]:px-3 [&_textarea]:py-[13px] [&_textarea]:text-xs [&_textarea]:leading-[1.6] [&_textarea]:font-normal [&_textarea]:text-ink [&_input::placeholder]:text-[11px] [&_input::placeholder]:text-[#9caaac] [&_textarea::placeholder]:text-[11px] [&_textarea::placeholder]:text-[#9caaac] mobile:pt-5 mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pb-6 mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:[&>p]:mb-6 mobile:[&>p]:text-sm mobile:[&>p]:leading-[1.8] mobile:[&_label]:mb-5 mobile:[&_label]:gap-[9px] mobile:[&_label]:text-sm mobile:[&_input]:min-h-[52px] mobile:[&_input]:rounded-[9px] mobile:[&_input]:p-[13px] mobile:[&_input]:text-base mobile:[&_input]:leading-[1.65] mobile:[&_textarea]:min-h-[52px] mobile:[&_textarea]:rounded-[9px] mobile:[&_textarea]:p-[13px] mobile:[&_textarea]:text-base mobile:[&_textarea]:leading-[1.65] mobile:[&_input::placeholder]:text-sm mobile:[&_textarea::placeholder]:text-sm low:group-data-[compact=true]/sheet:[&_textarea]:h-[52px] low:group-data-[compact=true]/sheet:[&_textarea]:min-h-[52px] low:group-data-[compact=true]/sheet:[&_textarea]:py-2.5 low:group-data-[compact=true]/sheet:[&_textarea]:leading-[1.5]"
+        className="px-7 pt-[23px] pb-7 [&>p]:mb-[23px] [&>p]:text-[11px] [&>p]:leading-[1.9] [&>p]:text-muted [&_label]:mb-[18px] [&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label]:text-[11px] [&_label]:font-semibold [&_input]:h-[45px] [&_input]:min-h-[45px] [&_input]:w-full [&_input]:rounded-[5px] [&_input]:border [&_input]:border-[#cedcde] [&_input]:bg-white [&_input]:px-3 [&_input]:py-2.5 [&_input]:text-xs [&_input]:leading-normal [&_input]:font-normal [&_input]:text-ink [&_textarea]:min-h-[45px] [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-[5px] [&_textarea]:border [&_textarea]:border-[#cedcde] [&_textarea]:bg-white [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-xs [&_textarea]:leading-[1.6] [&_textarea]:font-normal [&_textarea]:text-ink [&_input::placeholder]:text-[11px] [&_input::placeholder]:text-[#9caaac] [&_textarea::placeholder]:text-[11px] [&_textarea::placeholder]:text-[#9caaac] mobile:pt-5 mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pb-6 mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:[&>p]:mb-6 mobile:[&>p]:text-sm mobile:[&>p]:leading-[1.8] mobile:[&_label]:mb-5 mobile:[&_label]:gap-[9px] mobile:[&_label]:text-sm mobile:[&_input]:h-[45px] mobile:[&_input]:min-h-[45px] mobile:[&_input]:rounded-[9px] mobile:[&_input]:px-3 mobile:[&_input]:py-2.5 mobile:[&_input]:text-base mobile:[&_input]:leading-normal mobile:[&_textarea]:min-h-[45px] mobile:[&_textarea]:rounded-[9px] mobile:[&_textarea]:px-3 mobile:[&_textarea]:py-2.5 mobile:[&_textarea]:text-base mobile:[&_textarea]:leading-[1.65] mobile:[&_input::placeholder]:text-sm mobile:[&_textarea::placeholder]:text-sm low:group-data-[compact=true]/sheet:[&_textarea]:h-[45px] low:group-data-[compact=true]/sheet:[&_textarea]:min-h-[45px] low:group-data-[compact=true]/sheet:[&_textarea]:py-2.5 low:group-data-[compact=true]/sheet:[&_textarea]:leading-[1.5]"
       >
         <p>
           Cho tiệm xin thông tin để chuẩn bị và giao món. Lần sau tiệm sẽ nhớ
@@ -250,10 +283,10 @@ export function CheckoutSheet({
           <div>
             <strong>
               {customer.location
-                ? "Đã ghim vị trí giao hàng"
+                ? "Đã ghim vị trí hiện tại"
                 : "Ghim vị trí để tiệm dễ tìm bạn"}
             </strong>
-            <p>
+            <p role="status" aria-live="polite">
               {locationState ||
                 "Tiệm chỉ lấy vị trí khi bạn đồng ý. Hãy ghim tại nơi nhận hàng."}
             </p>
@@ -270,6 +303,30 @@ export function CheckoutSheet({
                   ? "Lấy lại vị trí"
                   : "Cho phép lấy vị trí"}
             </Button>
+            {(locating || customer.location) && (
+              <Button
+                variant="text"
+                type="button"
+                onClick={clearLocation}
+                disabled={isPending}
+                className="ml-3"
+              >
+                {locating ? "Nhập địa chỉ thủ công" : "Bỏ ghim vị trí"}
+              </Button>
+            )}
+            {customer.location && (
+              <p>
+                <a
+                  href={`https://maps.google.com/?q=${customer.location.lat},${customer.location.lng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-blue underline underline-offset-2"
+                >
+                  Xem vị trí trên bản đồ
+                </a>
+                {" · "}Nếu nhận ở nơi khác, hãy bỏ ghim và nhập đúng địa chỉ.
+              </p>
+            )}
           </div>
         </div>
         <label>

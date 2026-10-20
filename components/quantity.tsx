@@ -30,7 +30,7 @@ export function Quantity({
         <Minus size={15} />
       </button>
       <span aria-live="polite" className="font-semibold text-sm px-2">
-        {value}
+        <span key={value} className="quantity-value inline-block">{value}</span>
       </span>
       <button
         aria-label={`Tăng ${label}`}

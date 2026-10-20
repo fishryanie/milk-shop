@@ -10,7 +10,13 @@ bun install
 bun run dev
 ```
 
-Mở http://localhost:3200. Chạy bản production để đo tốc độ:
+Mở http://localhost:3200.
+
+Để thử trên điện thoại cùng Wi-Fi, mở `http://<IP máy tính>:3200`.
+Dev server tự cho phép các IP IPv4 hiện có trên máy khi khởi động; nếu đổi mạng,
+khởi động lại `bun run dev`. GPS vẫn cần HTTPS khi truy cập bằng IP mạng nội bộ.
+
+Chạy bản production để đo tốc độ:
 
 ```sh
 bun run build
@@ -28,6 +34,15 @@ Dùng các biến trong `.env.example`; giữ credentials và secret trên serve
 Cấp MongoDB user riêng chỉ truy cập các collection `storefront_*`; tài khoản tạo index
 cần quyền migration riêng. Chỉ đặt `STOREFRONT_TRUST_PROXY=true` khi proxy tin cậy
 đã ghi đè header `X-Forwarded-For`.
+
+Đặt `ZALO_BOT_TOKEN` và `ZALO_GROUP_ID` trong `.env.local` để nhận thông báo đơn
+mới vào nhóm Zalo. Trên hosting, đặt hai biến này trong môi trường server rồi
+build/restart ứng dụng. Token không được dùng biến `NEXT_PUBLIC_*`.
+Thông báo được gửi sau khi lưu đơn thành công, ngoài transaction và sau phản hồi
+cho khách; gửi lại cùng yêu cầu đặt hàng không tạo thông báo trùng. Tin nhắn gồm
+khách hàng, địa chỉ/bản đồ nếu có, món/size/topping, tiền, thanh toán và ghi chú.
+Đơn dài được chia thành nhiều tin (tối đa 2.000 ký tự/tin). Lỗi gửi được ghi trong
+log server với tiền tố `[zalo]`; đơn vẫn được lưu, không tự thử gửi lại khi lỗi.
 
 ## Runtime
 

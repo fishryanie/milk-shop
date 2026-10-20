@@ -2,7 +2,7 @@
 import { Button } from "./button";
 import { useMemo, useState } from "react";
 import { Check, ShoppingBag } from "lucide-react";
-import { Modal } from "./modal";
+import { Modal, useModalMotion } from "./modal";
 import {
   money,
   type CartLine,
@@ -19,9 +19,10 @@ export function ProductSheet({
 }: {
   product: ShopProduct;
   onClose: () => void;
-  onAdd: (line: CartLine) => void;
+  onAdd: (line: CartLine, origin: DOMRect) => boolean;
   initialLine?: CartLine;
 }) {
+  const { dialogRef, dismiss } = useModalMotion(onClose);
   const [quantity, setQuantity] = useState(() =>
     Math.min(initialLine?.quantity || 1, product.stock || 30),
   );
@@ -49,9 +50,10 @@ export function ProductSheet({
     (!product.sizes?.length || Boolean(size?.available));
   return (
     <Modal
+      dialogRef={dialogRef}
       title={product.name}
       eyebrow={product.category}
-      onClose={onClose}
+      onClose={() => dismiss()}
       footer={
         <div className="flex items-center gap-[15px] [&>button]:flex-1 [&>button>span]:ml-auto mobile:items-stretch mobile:gap-3 mobile:[&>button]:h-12 mobile:[&>button]:min-w-0 mobile:[&>button]:flex-col mobile:[&>button]:gap-[3px] mobile:[&>button]:px-2.5 mobile:[&>button]:py-0 mobile:[&>button]:text-[13px] mobile:[&>button]:leading-[1.4] mobile:[&>button>span]:m-0 mobile:[&>button>span]:text-[15px] mobile:[&>button>svg]:hidden">
           <Quantity
@@ -62,9 +64,12 @@ export function ProductSheet({
           <Button
             variant="primary"
             disabled={!available}
-            onClick={() => {
-              onAdd({ productId: product.id, ...(sizeId ? { sizeId } : {}), quantity, toppingIds: selected });
-              onClose();
+            onClick={(event) => {
+              const added = onAdd(
+                { productId: product.id, ...(sizeId ? { sizeId } : {}), quantity, toppingIds: selected },
+                event.currentTarget.getBoundingClientRect(),
+              );
+              if (added) dismiss();
             }}
           >
             <ShoppingBag size={18} />

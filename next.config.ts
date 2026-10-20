@@ -1,13 +1,15 @@
 import type { NextConfig } from "next";
+import { networkInterfaces } from "node:os";
+
+// Wi-Fi addresses can change. Allow only this machine's current IPv4 hosts
+// for development assets instead of keeping a stale, hard-coded LAN address.
+const localAddresses = Object.values(networkInterfaces()).flatMap((addresses) =>
+  (addresses ?? [])
+    .filter((address) => address.family === "IPv4" && !address.internal)
+    .map((address) => address.address),
+);
 const config: NextConfig = {
-  allowedDevOrigins: [
-    "192.168.1.181",
-    "192.168.1.181:3200",
-    "localhost",
-    "localhost:3200",
-    "127.0.0.1",
-    "127.0.0.1:3200",
-  ],
+  allowedDevOrigins: ["localhost", "127.0.0.1", ...new Set(localAddresses)],
   poweredByHeader: false,
   images: { remotePatterns: [{ protocol: "https", hostname: "**" }] },
   serverExternalPackages: ["mongodb", "sharp"],

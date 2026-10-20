@@ -284,7 +284,7 @@ export class CommerceStore {
       });
     }
   }
-  async checkout(raw: unknown, owner: string) {
+  async checkout(raw: unknown, owner: string, onCreated?: (order: ShopOrder) => void) {
     const input = checkoutSchema.parse(raw);
     const requestHash = createHash("sha256")
       .update(
@@ -296,7 +296,7 @@ export class CommerceStore {
       )
       .digest("hex");
     await this.expire();
-    return this.transaction(async (session) => {
+    const result = await this.transaction(async (session) => {
       const existing = await this.orders.findOne(
         {
           storeId: this.storeId,
@@ -311,7 +311,7 @@ export class CommerceStore {
             "Mã gửi đơn đã dùng cho nội dung khác. Hãy mở lại thanh toán.",
             409,
           );
-        return orderDto(existing);
+        return { order: orderDto(existing), created: false };
       }
       const settings = await this.settings(session);
       if (!settings.isOpen)
@@ -400,28 +400,41 @@ export class CommerceStore {
         ],
       };
       await this.orders.insertOne(o, { session });
-      return orderDto(o);
+      return { order: orderDto(o), created: true };
     });
+    // Only notify after commit, never from a transaction retry or an idempotent replay.
+    if (result.created) onCreated?.(result.order);
+    return result.order;
   }
   async listOrders(owner?: string, phone?: string, before?: string, status?: OrderStatus) {
     await this.expire();
-    const rows = await this.orders
-      .find(
-        {
-          storeId: this.storeId,
-          ...(owner ? { ownerHash: owner } : {}),
-          ...(phone ? { "customer.phone": phone } : {}),
-          ...(status ? { status } : {}),
-          ...(before && ObjectId.isValid(before)
-            ? { _id: { $lt: new ObjectId(before) } }
-            : {}),
-        },
-        { projection: { receipt: 0, payment: 0 } },
-      )
-      .sort({ _id: -1 })
-      .limit(51)
-      .toArray();
+    const filter = {
+      storeId: this.storeId,
+      ...(owner ? { ownerHash: owner } : {}),
+      ...(phone ? { "customer.phone": phone } : {}),
+    };
+    const [rows, activeCount] = await Promise.all([
+      this.orders
+        .find(
+          {
+            ...filter,
+            ...(status ? { status } : {}),
+            ...(before && ObjectId.isValid(before)
+              ? { _id: { $lt: new ObjectId(before) } }
+              : {}),
+          },
+          { projection: { receipt: 0, payment: 0 } },
+        )
+        .sort({ _id: -1 })
+        .limit(51)
+        .toArray(),
+      this.orders.countDocuments({
+        ...filter,
+        status: { $in: ["awaiting_payment", "payment_review", "paid", "preparing", "delivering"] },
+      }),
+    ]);
     return {
+      activeCount,
       orders: rows
         .slice(0, 50)
         .map((o) => ({

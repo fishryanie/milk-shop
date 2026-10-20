@@ -1,7 +1,9 @@
 "use client";
 import { Button } from "./button";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
+  ArrowLeft,
+  ChevronRight,
   Check,
   CheckCircle2,
   Clock3,
@@ -13,8 +15,9 @@ import {
   Upload,
   XCircle,
 } from "lucide-react";
-import { Modal } from "./modal";
+import { Modal, useModalMotion } from "./modal";
 import { api } from "@/lib/client";
+import { OrderCelebration } from "./order-celebration";
 import {
   money,
   statusLabels,
@@ -54,10 +57,13 @@ export function OrdersSheet({
   onClose: () => void;
   onRefreshCatalog: () => void;
 }) {
+  const { dialogRef, dismiss } = useModalMotion(onClose);
   const [orders, setOrders] = useState<ShopOrder[]>(
     initialOrder ? [initialOrder] : [],
   );
   const [activeId, setActiveId] = useState(initialOrder?.id || "");
+  const [detailReadyId, setDetailReadyId] = useState(initialOrder?.id || "");
+  const refreshSequence = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -66,15 +72,21 @@ export function OrdersSheet({
   const [isLoadingMore, startLoadMoreTransition] = useTransition();
 
   const refresh = useCallback(async () => {
+    const sequence = ++refreshSequence.current;
     try {
       const result = await api<{
         orders: ShopOrder[];
         nextCursor: string | null;
       }>("/api/orders");
-      const detailId = activeId || result.orders[0]?.id;
+      const detailId = activeId || (
+        result.orders.length === 1 && !result.nextCursor
+          ? result.orders[0].id
+          : undefined
+      );
       const detail = detailId
         ? await api<ShopOrder>(`/api/orders/${detailId}`)
         : undefined;
+      if (sequence !== refreshSequence.current) return;
       const incoming = detail
         ? result.orders.some((o) => o.id === detail.id)
           ? result.orders.map((o) => (o.id === detail.id ? detail : o))
@@ -85,11 +97,16 @@ export function OrdersSheet({
         ...old.filter((o) => !incoming.some((n) => n.id === o.id)),
       ]);
       setCursor(result.nextCursor);
+      if (detail) {
+        setActiveId(detail.id);
+        setDetailReadyId(detail.id);
+      }
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Chưa tải được đơn.");
+      if (sequence === refreshSequence.current)
+        setError(err instanceof Error ? err.message : "Chưa tải được đơn.");
     } finally {
-      setLoading(false);
+      if (sequence === refreshSequence.current) setLoading(false);
     }
   }, [activeId]);
   useEffect(() => {
@@ -97,9 +114,15 @@ export function OrdersSheet({
     const id = setInterval(() => {
       if (document.visibilityState === "visible") void refresh();
     }, 10000);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      refreshSequence.current++;
+    };
   }, [refresh]);
-  const active = orders.find((o) => o.id === activeId) || orders[0];
+  const active = orders.find((o) => o.id === activeId);
+  const hasMultipleOrders = orders.length > 1 || Boolean(cursor);
+  const detailReady = Boolean(active && detailReadyId === active.id);
+  const celebrating = Boolean(initialOrder && active?.id === initialOrder.id);
 
   function loadMore() {
     if (!cursor || isLoadingMore) return;
@@ -150,17 +173,20 @@ export function OrdersSheet({
   }
   return (
     <Modal
-      title={initialOrder ? "Tiệm đã nhận đơn!" : "Đơn của bạn"}
+      dialogRef={dialogRef}
+      title={celebrating ? "Tiệm đã nhận đơn!" : "Đơn của bạn"}
       eyebrow={
-        initialOrder
+        celebrating
           ? "Cảm ơn bạn đã ghé tiệm"
-          : "Tiệm đang chuẩn bị đơn cho bạn"
+          : !activeId
+            ? "Chọn đơn để xem chi tiết"
+            : "Theo dõi đơn hàng của bạn"
       }
-      onClose={onClose}
+      onClose={() => dismiss()}
       wide
       busy={isUploading}
       footer={
-        active?.status === "awaiting_payment" ? (
+        detailReady && active?.status === "awaiting_payment" ? (
           <div className="[&>p]:mt-0 [&>p]:mb-3">
             {error && (
               <p
@@ -193,6 +219,9 @@ export function OrdersSheet({
       }
     >
       <div className="px-7 pt-[22px] pb-7 mobile:pt-[18px] mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pb-6 mobile:pl-[max(12px,env(safe-area-inset-left,0px))]">
+        {initialOrder && celebrating && (
+          <OrderCelebration transfer={initialOrder.paymentMethod === "bank_transfer"} />
+        )}
         {loading && !orders.length ? (
           <div className="flex min-h-[280px] flex-col items-center justify-center gap-[17px] px-5 py-10 text-center [&_svg]:text-[#8aa5ab] [&_h3]:font-serif [&_h3]:text-[27px] [&_p]:max-w-[350px] [&_p]:text-xs [&_p]:leading-[1.8] [&_p]:text-muted mobile:min-h-[260px] mobile:gap-4 mobile:py-[30px] mobile:[&_h3]:leading-[1.3] mobile:[&_p]:text-sm">
             <RefreshCw className="animate-spin" />
@@ -203,40 +232,74 @@ export function OrdersSheet({
             <ShoppingBag size={46} strokeWidth={1} />
             <h3>Bạn chưa đặt đơn nào</h3>
             <p>Những món ngon đang chờ bạn ở menu.</p>
-            <Button variant="primary" onClick={onClose}>
+            <Button variant="primary" onClick={() => dismiss()}>
               Chọn món thôi
             </Button>
           </div>
         ) : (
           <>
-            {(orders.length > 1 || cursor) && (
-              <div className="flex gap-[9px] overflow-x-auto pb-[13px] [scrollbar-width:thin] [&_button]:rounded-[5px] [&_button]:border [&_button]:border-line [&_button]:px-[13px] [&_button]:py-2.5 [&_button]:text-left [&_button]:whitespace-nowrap [&_button]:enabled:active:scale-[.94] [&_button]:enabled:active:brightness-[.96] [&_button[aria-pressed=true]]:border-[#82b3bf] [&_button[aria-pressed=true]]:bg-[#edf5f6] [&_button[aria-pressed=true]]:text-ink [&_b]:block [&_b]:text-[9px] [&_b]:tracking-[.3px] [&_span]:mt-[5px] [&_span]:block [&_span]:text-[8px] [&_span]:text-muted mobile:[&_button]:min-h-16 mobile:[&_button]:rounded-[9px] mobile:[&_button]:p-3 mobile:[&_b]:text-[11px] mobile:[&_span]:mt-[7px] mobile:[&_span]:text-[11px]">
-                {orders.map((o) => (
-                  <button
-                    key={o.id}
-                    aria-pressed={o.id === active?.id}
-                    className="relative block shrink-0 cursor-pointer overflow-hidden select-none text-xs font-medium text-ink transition-[transform,scale,box-shadow,background-color,border-color,filter,opacity] duration-150 enabled:active:scale-[.94] enabled:active:brightness-[.96] disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent]"
-                    onClick={() => {
-                      setActiveId(o.id);
-                      setError("");
-                    }}
-                  >
-                    <b>{o.code}</b>
-                    <span>{statusLabels[o.status]}</span>
-                  </button>
-                ))}
+            {!activeId && (
+              <>
+                <ul aria-label="Danh sách đơn hàng" className="grid list-none gap-3 p-0">
+                  {orders.map((order) => (
+                    <li key={order.id}>
+                      <button
+                        type="button"
+                        className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-line bg-white p-4 text-left transition-colors hover:border-blue hover:bg-blue-light active:bg-blue-light"
+                        onClick={() => {
+                          setActiveId(order.id);
+                          setDetailReadyId("");
+                          setCopied(false);
+                          setError("");
+                        }}
+                        aria-label={`Xem đơn ${order.code}`}
+                      >
+                        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-blue-light text-blue">
+                          <ShoppingBag size={20} strokeWidth={1.6} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block break-all text-sm font-semibold text-ink">{order.code}</span>
+                          <span className="mt-1 block text-xs text-muted">
+                            {formatDate(order.createdAt)} · {formatClock(order.createdAt)}
+                          </span>
+                          <span className="mt-2 block text-xs font-medium text-blue">{statusLabels[order.status]}</span>
+                          <span className="mt-1 block text-xs text-muted">
+                            {order.quote.lines.reduce((total, line) => total + line.quantity, 0)} món · {money(order.quote.total)}
+                          </span>
+                        </span>
+                        <ChevronRight size={18} className="shrink-0 text-muted" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
                 {cursor && (
-                  <button
-                    className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 rounded-lg text-xs font-medium border border-line bg-white hover:bg-blue-light"
-                    onClick={loadMore}
-                    disabled={isLoadingMore}
-                  >
-                    {isLoadingMore ? "Đang tải…" : "Đơn trước"}
-                  </button>
+                  <Button className="mt-4 w-full" onClick={loadMore} disabled={isLoadingMore}>
+                    {isLoadingMore ? "Đang tải…" : "Xem thêm đơn hàng"}
+                  </Button>
                 )}
+              </>
+            )}
+            {activeId && hasMultipleOrders && (
+              <Button
+                variant="text"
+                className="mb-4"
+                disabled={isUploading}
+                onClick={() => {
+                  setActiveId("");
+                  setDetailReadyId("");
+                  setCopied(false);
+                  setError("");
+                }}
+              >
+                <ArrowLeft size={16} /> Danh sách đơn hàng
+              </Button>
+            )}
+            {activeId && !detailReady && !error && (
+              <div role="status" className="flex min-h-40 items-center justify-center gap-3 text-sm text-muted">
+                <RefreshCw size={18} className="animate-spin" /> Đang tải chi tiết đơn…
               </div>
             )}
-            {active && (
+            {active && detailReady && (
               <>
                 <div className="my-[21px] flex items-center justify-between [&_p]:text-[8px] [&_h3]:text-base [&_h3]:tracking-[1px] mobile:my-[18px] mobile:gap-[9px] mobile:[&_p]:text-[10px] mobile:[&_h3]:leading-[1.6] mobile:[&_h3]:tracking-[.4px] mobile:[&_h3]:[overflow-wrap:anywhere]">
                   <div>
@@ -436,7 +499,7 @@ export function OrdersSheet({
             )}
           </>
         )}
-        {error && active?.status !== "awaiting_payment" && (
+        {error && (!detailReady || active?.status !== "awaiting_payment") && (
           <div
             className="my-3.5 flex items-start gap-2.5 rounded-[5px] px-[17px] py-[15px] text-[11px] leading-[1.8] [&_svg]:mt-0.5 [&_svg]:shrink-0 [&_button]:ml-auto [&_button]:p-0 [&_button]:text-[10px] [&_button]:font-semibold [&_button]:whitespace-nowrap [&_button]:underline mobile:p-3.5 mobile:text-[13px] mobile:leading-[1.75] mobile:[&_button]:h-10 mobile:[&_button]:min-h-10 mobile:[&_button]:text-xs bg-[#fbede8] text-[#9f4a3b]"
             role="alert"

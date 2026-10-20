@@ -3,6 +3,8 @@ import { ok, fail } from "@/lib/http";
 import { jsonBody, rateLimit, sameOrigin, session } from "@/lib/security";
 import { ownerHash } from "@/shared/commerce/store";
 import { checkoutSchema } from "@/shared/commerce/validation";
+import { after } from "next/server";
+import { notifyZaloOrder } from "@/lib/zalo";
 export async function GET(request: Request) {
   try {
     const owner = ownerHash(await session());
@@ -20,7 +22,10 @@ export async function POST(request: Request) {
     await rateLimit(request, "checkout-ip", 10, 3600);
     const body = checkoutSchema.parse(await jsonBody(request));
     await rateLimit(request, "checkout-phone", 6, 3600, body.customer.phone);
-    return ok(await (await store()).checkout(body, owner), 201);
+    const order = await (await store()).checkout(body, owner, (created) => {
+      after(() => notifyZaloOrder(created));
+    });
+    return ok(order, 201);
   } catch (error) {
     return fail(error);
   }

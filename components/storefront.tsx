@@ -44,6 +44,8 @@ import { ProductImage } from "./product-image";
 import { milkImage } from "@/lib/milk-image";
 import { DeliveryPolicy } from "./delivery-policy";
 import { FloatingFooter } from "./floating-footer";
+import { FeedbackToast } from "./feedback-toast";
+import { animateCartAddition } from "@/lib/cart-motion";
 
 function SheetLoading() {
   return (
@@ -102,10 +104,12 @@ export function Storefront({
     "cart" | "checkout" | "orders" | "tour" | null
   >(null);
   const [newOrder, setNewOrder] = useState<ShopOrder | undefined>();
+  const [orderCount, setOrderCount] = useState(0);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [quoteError, setQuoteError] = useState("");
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{ message: string; id: number } | null>(null);
+  const toastSequence = useRef(0);
   const [editingLine, setEditingLine] = useState<CartLine | undefined>();
   const quoteSeq = useRef(0);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -157,6 +161,31 @@ export function Storefront({
       document.removeEventListener("visibilitychange", focus);
     };
   }, [refreshCatalog]);
+  useEffect(() => {
+    if (modal === "orders" || modal === "checkout") return;
+    let cancelled = false;
+    const refreshOrderCount = async () => {
+      try {
+        const result = await api<{ activeCount: number }>("/api/orders");
+        if (!cancelled) setOrderCount(result.activeCount);
+      } catch {
+        // Keep the last known count when the connection is unavailable.
+      }
+    };
+    void refreshOrderCount();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshOrderCount();
+    };
+    const interval = setInterval(refreshWhenVisible, 10000);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("focus", refreshWhenVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", refreshWhenVisible);
+    };
+  }, [modal]);
   useEffect(() => {
     if (hydrated) saveLocal("milk-cart", cart);
   }, [cart, hydrated]);
@@ -238,9 +267,9 @@ export function Storefront({
     return { count, approximate, countsByProduct };
   }, [optimisticCart, products]);
   function notify(message: string) {
-    setToast(message);
+    setToast({ message, id: ++toastSequence.current });
     clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 3000);
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
   }
   function updateCart(next: CartLine[]) {
     if (!next.length) setQuote(null);
@@ -250,7 +279,7 @@ export function Storefront({
       setCart(next);
     });
   }
-  function add(line: CartLine) {
+  function add(line: CartLine, origin: DOMRect) {
     if (editingLine) {
       const next = optimisticCart.filter(
         (l) => cartKey(l) !== cartKey(editingLine),
@@ -267,16 +296,16 @@ export function Storefront({
       );
       setEditingLine(undefined);
       notify("Đã cập nhật món trong giỏ");
-      return;
+      return true;
     }
     if (count + line.quantity > 100) {
       notify("Mỗi đơn tối đa 100 món. Bạn chia thành nhiều đơn nhé.");
-      return;
+      return false;
     }
     const old = optimisticCart.find((l) => cartKey(l) === cartKey(line));
     if (old && old.quantity + line.quantity > 30) {
       notify("Mỗi loại món và topping tối đa 30 phần.");
-      return;
+      return false;
     }
     updateCart(
       old
@@ -287,7 +316,9 @@ export function Storefront({
           )
         : [...optimisticCart, line],
     );
+    animateCartAddition(origin, line.quantity);
     notify("Đã thêm vào giỏ hàng");
+    return true;
   }
   function closeTour() {
     saveLocal("milk-tour-seen", true);
@@ -370,11 +401,12 @@ export function Storefront({
         <button
           className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative flex h-10 min-h-10 items-center gap-2.5 rounded-lg border border-[#bdcfd3] px-3 text-xs font-semibold hover:border-blue/50 [&_b]:grid [&_b]:h-5 [&_b]:min-w-5 [&_b]:place-items-center [&_b]:rounded-full [&_b]:bg-blue [&_b]:text-[10px] [&_b]:text-white enabled:active:scale-[.96] enabled:active:translate-y-px enabled:active:border-blue enabled:active:bg-blue-light mobile:min-w-[52px] mobile:shrink-0 mobile:gap-1.5 mobile:px-2.5 mobile:[&>span]:hidden mobile:[&_b]:text-[11px]"
           onClick={() => setModal("cart")}
+          data-cart-target
           aria-label={`Mở giỏ hàng, ${count} món`}
         >
           <ShoppingBag size={19} />
           <span>Giỏ hàng</span>
-          <b>{count}</b>
+          <b key={count} className="cart-count">{count}</b>
         </button>
       </header>
       <main>
@@ -444,15 +476,15 @@ export function Storefront({
         <div className="flex justify-around gap-6 border-y border-line bg-[#f2f7f6] px-[8vw] py-[21px] text-[#607b80] [&>span]:flex [&>span]:items-center [&>span]:gap-2.5 [&>span]:text-[10px] [&_svg]:text-blue mobile:justify-between mobile:gap-3 mobile:px-3 mobile:py-3.5 mobile:[&>span]:gap-1.5 mobile:[&>span]:leading-[1.4] mobile:[&>span:last-child]:hidden mobile:[&_svg]:w-[17px] mobile:[&_svg]:shrink-0 tiny:[&>span]:gap-1 tiny:[&>span]:text-[9px] tiny:[&_svg]:w-[15px]">
           <span>
             <Milk size={20} strokeWidth={1.35} />
-            Béo thơm vị sữa
+            Ngọt dịu, béo thơm
           </span>
           <span>
             <Leaf size={20} strokeWidth={1.35} />
-            Topping nhà làm
+            Làm mới mỗi ngày
           </span>
           <span>
             <Truck size={20} strokeWidth={1.35} />
-            Giao đến tận tay
+            Miễn phí giao hàng
           </span>
           <span>
             <Heart size={20} strokeWidth={1.35} />
@@ -724,7 +756,7 @@ export function Storefront({
                   />
                   <span className="leading-snug">{address}</span>
                 </a>
-             
+
                 {/* Map nhỏ dưới chữ mở trên google map */}
                 <div className="relative mt-2 w-full max-w-[340px] h-[145px] overflow-hidden rounded-xl border border-line bg-[#eaf0f2] shadow-[0_2px_8px_#203d450a] transition-all hover:border-blue/50 hover:shadow-md">
                   <iframe
@@ -798,6 +830,7 @@ export function Storefront({
       </footer>
       <FloatingFooter
         count={count}
+        orderCount={orderCount}
         approximate={approximate}
         visible={!modal && !selected}
         showTour={showTour}
@@ -807,15 +840,7 @@ export function Storefront({
           setModal("orders");
         }}
       />
-      {toast && (
-        <div
-          className="fixed bottom-[105px] left-1/2 z-100 flex -translate-x-1/2 items-center gap-2.5 rounded-md bg-ink px-[18px] py-3 text-[11px] whitespace-nowrap text-white shadow-[0_3px_20px_#203d451a] mobile:bottom-[58px] mobile:w-max mobile:max-w-[calc(100vw-24px)] mobile:px-4 mobile:text-[13px] mobile:leading-[1.6] mobile:whitespace-normal mobile:[&_svg]:shrink-0"
-          role="status"
-        >
-          <Check size={17} />
-          {toast}
-        </div>
-      )}
+      {toast && <FeedbackToast key={toast.id} message={toast.message} />}
       {selected && (
         <ProductSheet
           key={selected.id}
@@ -864,6 +889,7 @@ export function Storefront({
           onSuccess={(order) => {
             updateCart([]);
             setNewOrder(order);
+            setOrderCount((current) => current + 1);
             setModal("orders");
             void refreshCatalog();
           }}

@@ -9,7 +9,7 @@ import {
   AlertCircle,
   Pencil,
 } from "lucide-react";
-import { Modal } from "./modal";
+import { Modal, useModalMotion } from "./modal";
 import { ProductImage } from "./product-image";
 import { Quantity } from "./quantity";
 import {
@@ -42,6 +42,7 @@ export function CartSheet({
   onClose: () => void;
   onEdit: (line: CartLine) => void;
 }) {
+  const { dialogRef, dismiss } = useModalMotion(onClose);
   const isCurrent = Boolean(
     quote &&
     quote.lines.length === cart.length &&
@@ -53,9 +54,10 @@ export function CartSheet({
   );
   return (
     <Modal
+      dialogRef={dialogRef}
       title={cart.length ? `Giỏ hàng (${cart.length})` : "Giỏ hàng của bạn"}
       compact={cart.length > 0}
-      onClose={onClose}
+      onClose={() => dismiss()}
       footer={
         cart.length > 0 ? (
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
@@ -80,7 +82,7 @@ export function CartSheet({
                 Boolean(error) ||
                 !settings.isOpen
               }
-              onClick={onCheckout}
+              onClick={() => dismiss(onCheckout)}
             >
               Đặt hàng <ArrowRight size={18} />
             </Button>
@@ -98,7 +100,7 @@ export function CartSheet({
           <ShoppingBag size={48} strokeWidth={1} />
           <h3>Giỏ còn trống, bụng còn thèm?</h3>
           <p>Chọn một món ngon để tiệm chuẩn bị cho bạn nhé.</p>
-          <Button variant="primary" onClick={onClose}>
+          <Button variant="primary" onClick={() => dismiss()}>
             Dạo một vòng menu <ArrowRight size={18} />
           </Button>
         </div>
@@ -180,7 +182,7 @@ export function CartSheet({
                       <button
                         className="min-h-10 w-full cursor-pointer rounded-sm text-left touch-manipulation focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
                         aria-label={`Sửa lựa chọn ${row?.name || "món"}`}
-                        onClick={() => onEdit(line)}
+                        onClick={() => dismiss(() => onEdit(line))}
                       >
                         {details}
                       </button>
