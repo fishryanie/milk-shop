@@ -468,7 +468,7 @@ export function OrdersSheet({
                   ))}
                   <div>
                     <span>Phí giao hàng</span>
-                    <span>{money(active.quote.deliveryFee)}</span>
+                    <span>{active.quote.delivery?.mode === "external" ? "Bạn tự book ship, trả phí riêng" : money(active.quote.deliveryFee)}</span>
                   </div>
                   <div>
                     <span>Thanh toán</span>

@@ -35,6 +35,19 @@ Cấp MongoDB user riêng chỉ truy cập các collection `storefront_*`; tài 
 cần quyền migration riêng. Chỉ đặt `STOREFRONT_TRUST_PROXY=true` khi proxy tin cậy
 đã ghi đè header `X-Forwarded-For`.
 
+Trên server release của `caitiemsua.com`, đặt:
+
+```dotenv
+STOREFRONT_ORIGIN=https://caitiemsua.com
+```
+
+Sau khi đổi biến môi trường, restart/redeploy ứng dụng. Nếu hosting quản lý biến
+môi trường riêng, cập nhật ở đó; `.env.local` không được đưa lên Git. Origin phải
+khớp cả giao thức, hostname và port (nếu có); chuyển hướng `www.caitiemsua.com` về
+`caitiemsua.com` nếu dùng domain chính này. Nếu giữ giá trị `http://localhost:3200`,
+menu vẫn có thể hiển thị nhưng `POST /api/cart` bị chặn với HTTP 403 và thông báo
+“Yêu cầu không hợp lệ.”.
+
 Đặt `ZALO_BOT_TOKEN` và `ZALO_GROUP_ID` trong `.env.local` để nhận thông báo đơn
 mới vào nhóm Zalo. Trên hosting, đặt hai biến này trong môi trường server rồi
 build/restart ứng dụng. Token không được dùng biến `NEXT_PUBLIC_*`.

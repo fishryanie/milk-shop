@@ -41,7 +41,8 @@ import {
   type ShopSettings,
 } from "@/shared/commerce/types";
 import { ProductImage } from "./product-image";
-import { milkImage } from "@/lib/milk-image";
+import { storefrontImage } from "@/lib/storefront-image";
+import introStyles from "./storefront-intro.module.css";
 import { DeliveryPolicy } from "./delivery-policy";
 import { FloatingFooter } from "./floating-footer";
 import { FeedbackToast } from "./feedback-toast";
@@ -238,8 +239,9 @@ export function Storefront({
   const products = catalog.products;
   const address =
     settings.address || "748/30 Thống Nhất, An Hội Đông, Hồ Chí Minh";
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-  const embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=m&z=16&output=embed`;
+  const mapCoordinates = "10.852523902605594,106.66730207366463";
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapCoordinates)}`;
+  const embedUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapCoordinates)}&t=m&z=16&output=embed`;
   const { count, approximate, countsByProduct } = useMemo(() => {
     const byId = new Map(products.map((product) => [product.id, product]));
     const countsByProduct = new Map<string, number>();
@@ -410,9 +412,9 @@ export function Storefront({
         </button>
       </header>
       <main>
-        <section className="mx-auto grid max-w-[1440px] grid-cols-2 items-center gap-[45px] px-[5.5vw] pt-[58px] pb-[54px] [&_h1]:max-w-[550px] [&_h1]:font-serif [&_h1]:text-[clamp(43px,4.8vw,69px)] [&_h1]:leading-[1.16] [&_h1]:font-normal [&_h1]:tracking-[-2.2px] [&_em]:inline [&_em]:font-normal [&_em]:text-blue [&_em]:not-italic tablet:gap-[30px] tablet:pt-10 tablet:[&_h1]:text-[51px] mobile:grid-cols-[minmax(0,1fr)_minmax(105px,.67fr)] mobile:gap-4 mobile:px-3 mobile:pt-[22px] mobile:pb-6 mobile:[&_h1]:text-[clamp(28px,7.5vw,42px)] mobile:[&_h1]:leading-[1.13] mobile:[&_h1]:tracking-[-.9px] tiny:grid-cols-[minmax(0,1fr)_105px] tiny:gap-3 tiny:[&_h1]:text-[27px]">
+        <section className={`${introStyles.intro} mx-auto grid max-w-[1440px] grid-cols-2 items-center gap-[45px] px-[5.5vw] pt-[58px] pb-[54px] [&_h1]:max-w-[550px] [&_h1]:font-serif [&_h1]:text-[clamp(43px,4.8vw,69px)] [&_h1]:leading-[1.16] [&_h1]:font-normal [&_h1]:tracking-[-2.2px] [&_em]:inline [&_em]:font-normal [&_em]:text-blue [&_em]:not-italic tablet:gap-[30px] tablet:pt-10 tablet:[&_h1]:text-[51px] mobile:grid-cols-[minmax(0,1fr)_minmax(105px,.67fr)] mobile:gap-4 mobile:px-3 mobile:pt-[22px] mobile:pb-6 mobile:[&_h1]:text-[clamp(28px,7.5vw,42px)] mobile:[&_h1]:leading-[1.13] mobile:[&_h1]:tracking-[-.9px] tiny:grid-cols-[minmax(0,1fr)_105px] tiny:gap-3 tiny:[&_h1]:text-[27px]`}>
           <div className="pt-1.5 pb-4 [&>p]:mt-6 [&>p]:mb-[26px] [&>p]:max-w-[360px] [&>p]:text-xs [&>p]:leading-[1.95] [&>p]:text-muted mobile:min-w-0 mobile:p-0 mobile:[&>p]:hidden">
-            <div className="mb-[25px] flex items-center gap-2 text-[10px] tracking-[.25px] text-[#5d7376] mobile:mb-3 mobile:gap-[7px] mobile:text-[11px] mobile:[&>span:last-child]:hidden">
+            <div className={`${introStyles.status} mb-[25px] flex items-center gap-2 text-[10px] tracking-[.25px] text-[#5d7376] mobile:mb-3 mobile:gap-[7px] mobile:text-[11px] mobile:[&>span:last-child]:hidden`}>
               <span
                 className={`size-1.5 rounded-full bg-[#639775] shadow-[0_0_0_3px_#63977512] ${settings.isOpen ? "" : "bg-[#ad795c]!"}`}
               />
@@ -429,7 +431,7 @@ export function Storefront({
             </h1>
             <p>{settings.description}</p>
             <a
-              className="relative inline-flex h-10 min-h-10 items-center justify-center gap-2 overflow-hidden rounded-lg px-4 text-[13px] font-semibold select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 active:translate-y-px active:scale-[.96] mobile:[&>svg]:shrink-0 bg-blue text-white hover:-translate-y-px hover:bg-blue-dark active:translate-y-[1.5px] active:bg-blue-dark active:brightness-[.94] active:shadow-[inset_0_1px_4px_#203d4559] gap-3 px-[18px] mobile:mt-[18px] mobile:gap-2 mobile:px-3.5 mobile:[&_svg]:w-4 mobile:[&_svg]:shrink-0 tiny:px-2.5 tiny:text-[11px]"
+              className={`${introStyles.cta} relative inline-flex h-10 min-h-10 items-center justify-center gap-2 overflow-hidden rounded-lg px-4 text-[13px] font-semibold select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 active:translate-y-px active:scale-[.96] mobile:[&>svg]:shrink-0 bg-blue text-white hover:-translate-y-px hover:bg-blue-dark active:translate-y-[1.5px] active:bg-blue-dark active:brightness-[.94] active:shadow-[inset_0_1px_4px_#203d4559] gap-3 px-[18px] mobile:mt-[18px] mobile:gap-2 mobile:px-3.5 mobile:[&_svg]:w-4 mobile:[&_svg]:shrink-0 tiny:px-2.5 tiny:text-[11px]`}
               href="#menu"
             >
               Chọn món bạn thích <ArrowDown size={17} />
@@ -445,14 +447,15 @@ export function Storefront({
               </span>
             </div>
           </div>
-          <div className="relative min-w-0 pr-[13px] tablet:p-0">
+          <div className={`${introStyles.visual} relative min-w-0 pr-[13px] tablet:p-0`}>
+            <Sparkles className={introStyles.sparkle} strokeWidth={1.1} aria-hidden="true" />
             <img
-              {...milkImage}
-              className="h-[408px] w-full rounded-[45%_45%_4px_4px] bg-[#dce9eb] object-cover tablet:h-[360px] mobile:h-[205px] mobile:rounded-[45%_45%_10px_10px] tiny:h-[190px]"
-              width={1536}
-              height={1024}
+              {...storefrontImage}
+              className="h-[408px] w-full object-contain tablet:h-[360px] mobile:h-[205px] tiny:h-[190px]"
+              width={1280}
+              height={1170}
               sizes="(max-width: 760px) 50vw, 45vw"
-              alt="Sữa tuyết mềm mịn cùng topping trân châu và sữa dâu nhà làm"
+              alt="Sữa tuyết Oreo và bánh flan caramel"
               loading="eager"
               decoding="async"
               fetchPriority="high"
@@ -466,7 +469,7 @@ export function Storefront({
               </b>
               <Heart size={17} />
             </div>
-            <div className="mt-4 flex items-center justify-center gap-2.5 text-[8px] tracking-[1.2px] text-[#71868b] [&_i]:block [&_i]:h-px [&_i]:w-[27px] [&_i]:bg-[#a7bec4] mobile:mt-2.5 mobile:gap-1.5 mobile:text-[9px] mobile:tracking-[.2px] mobile:[&>span]:hidden mobile:[&_i]:w-[18px]">
+            <div className={`${introStyles.caption} mt-4 flex items-center justify-center gap-2.5 text-[8px] tracking-[1.2px] text-[#71868b] [&_i]:block [&_i]:h-px [&_i]:w-[27px] [&_i]:bg-[#a7bec4] mobile:mt-2.5 mobile:gap-1.5 mobile:text-[9px] mobile:tracking-[.2px] mobile:[&>span]:hidden mobile:[&_i]:w-[18px]`}>
               <span>MADE WITH A LITTLE LOVE</span>
               <i />
               Cái Tiệm Sữa

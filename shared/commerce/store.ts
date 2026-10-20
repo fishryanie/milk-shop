@@ -137,7 +137,7 @@ export class CommerceStore {
       : await Promise.all([productQuery, this.settings()]);
     return { products: products.map(productDto), settings };
   }
-  async quote(cart: CartLine[], session?: ClientSession, currentSettings?: ShopSettings) {
+  async quote(cart: CartLine[], session?: ClientSession, currentSettings?: ShopSettings, location?: Customer["location"]) {
     const productQuery = this.products
       .find(
         {
@@ -150,7 +150,7 @@ export class CommerceStore {
     const [products, settings] = session
       ? [await productQuery, currentSettings ?? await this.settings(session)] as const
       : await Promise.all([productQuery, currentSettings ?? this.settings()]);
-    return quoteCart(cart, products.map(productDto), settings);
+    return quoteCart(cart, products.map(productDto), settings, location);
   }
   async saveProduct(input: unknown, id?: string) {
     const { expectedRevision, ...product } = productUpdateSchema.parse(input);
@@ -325,7 +325,7 @@ export class CommerceStore {
           409,
           "PAYMENT_NOT_CONFIGURED",
         );
-      const quote = await this.quote(input.cart, session, settings);
+      const quote = await this.quote(input.cart, session, settings, input.customer.location);
       if (!quote.valid || quote.digest !== input.digest)
         throw new CommerceError(
           "Giá, topping hoặc tồn hàng vừa thay đổi. Vui lòng kiểm tra lại giỏ hàng.",

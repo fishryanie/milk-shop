@@ -109,9 +109,14 @@ export const customerSchema = z.strictObject({
     })
     .nullable(),
 });
+export const deliveryCustomerSchema = customerSchema.extend({
+  location: customerSchema.shape.location.unwrap(),
+});
+export const cartQuoteSchema = z.strictObject({ cart: cartSchema, customer: deliveryCustomerSchema });
 export const checkoutSchema = z.strictObject({
   cart: cartSchema,
-  customer: customerSchema,
+  customer: deliveryCustomerSchema,
+  shippingConfirmed: z.literal(true),
   paymentMethod: z.enum(["cod", "bank_transfer"]).default("bank_transfer"),
   digest: z.string().regex(/^[a-f0-9]{64}$/),
   idempotencyKey: z.uuid(),

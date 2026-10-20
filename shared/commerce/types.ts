@@ -79,6 +79,12 @@ export type Quote = {
   total: number;
   valid: boolean;
   digest: string;
+  delivery?: DeliveryQuote;
+};
+export type DeliveryQuote = {
+  mode: "free" | "local" | "external";
+  distanceKm: number;
+  fee: number;
 };
 export const orderStatuses = [
   "awaiting_payment",

@@ -63,7 +63,7 @@ export function CartSheet({
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
             <div className="min-w-0">
               <span className="block text-[11px] leading-4 text-muted">
-                Tổng thanh toán
+                Tiền món · chưa gồm ship
               </span>
               <strong
                 className="block text-xl leading-7 text-blue tabular-nums"

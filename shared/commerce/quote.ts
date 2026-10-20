@@ -5,12 +5,15 @@ import type {
   QuotedLine,
   ShopProduct,
   ShopSettings,
+  Customer,
 } from "./types";
 import { cartKey } from "./types";
+import { quoteDelivery } from "./delivery";
 export function quoteCart(
   cart: CartLine[],
   products: ShopProduct[],
   settings: ShopSettings,
+  location?: Customer["location"],
 ): Quote {
   const amounts = new Map<string, number>();
   for (const line of cart)
@@ -62,15 +65,13 @@ export function quoteCart(
     };
   });
   const subtotal = lines.reduce((sum, l) => sum + l.total, 0);
-  const deliveryFee =
-    settings.freeDeliveryFrom > 0 && subtotal >= settings.freeDeliveryFrom
-      ? 0
-      : settings.deliveryFee;
+  const delivery = location ? quoteDelivery(location) : undefined;
+  const deliveryFee = delivery?.fee ?? 0;
   const valid =
     settings.isOpen && lines.length > 0 && lines.every((l) => l.available);
   const digest = createHash("sha256")
     .update(
-      JSON.stringify({ lines, deliveryFee, valid, qrImage: settings.qrImage }),
+      JSON.stringify({ lines, delivery, location, deliveryFee, valid, qrImage: settings.qrImage }),
     )
     .digest("hex");
   return {
@@ -80,6 +81,7 @@ export function quoteCart(
     total: subtotal + deliveryFee,
     valid,
     digest,
+    ...(delivery ? { delivery } : {}),
   };
 }
 export { orderTransitions as transitions } from "./types";

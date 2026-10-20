@@ -36,6 +36,7 @@ import {
   type ShopOrder,
   type ShopSettings,
 } from "@/shared/commerce/types";
+import { deliveryMessage } from "@/shared/commerce/delivery";
 const blank: Customer = {
   name: "",
   phone: "",
@@ -43,6 +44,7 @@ const blank: Customer = {
   note: "",
   location: null,
 };
+const distanceFormatter = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 });
 export function CheckoutSheet({
   cart,
   quote,
@@ -68,21 +70,48 @@ export function CheckoutSheet({
   const [locationState, setLocationState] = useState("");
   const acceptedQuote = useRef(quote).current;
   const [locating, setLocating] = useState(false);
+  const [review, setReview] = useState<{
+    quote: Quote;
+    customer: Customer;
+    paymentMethod: PaymentMethod;
+  } | null>(null);
   const key = useRef("");
   const locationGeneration = useRef(0);
+  const reviewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!review) return;
+    dialogRef.current?.querySelector("[data-modal-scroll]")?.scrollTo({ top: 0 });
+    reviewRef.current?.focus();
+  }, [review, dialogRef]);
 
   const [error, formAction, isPending] = useActionState(
     async (_prevState: string | null, _formData?: FormData) => {
       if (document.activeElement instanceof HTMLElement)
         document.activeElement.blur();
       try {
+        if (!review) {
+          if (!customer.location)
+            return "Bạn yêu bật định vị tại nơi nhận hàng để tiệm tính phí ship trước nhé.";
+          const deliveryQuote = await api<Quote>("/api/cart", {
+            method: "POST",
+            body: JSON.stringify({ cart, customer }),
+          });
+          if (!deliveryQuote.valid || !deliveryQuote.delivery) {
+            dismiss(onChanged);
+            return "Giỏ hàng vừa thay đổi. Bạn kiểm tra lại giúp tiệm nhé.";
+          }
+          setReview({ quote: deliveryQuote, customer, paymentMethod });
+          return null;
+        }
         const order = await api<ShopOrder>("/api/orders", {
           method: "POST",
           body: JSON.stringify({
             cart,
-            customer,
-            paymentMethod,
-            digest: acceptedQuote.digest,
+            customer: review.customer,
+            paymentMethod: review.paymentMethod,
+            digest: review.quote.digest,
+            shippingConfirmed: true,
             idempotencyKey: key.current,
           }),
         });
@@ -101,13 +130,13 @@ export function CheckoutSheet({
   const locate = useCallback(() => {
     if (!window.isSecureContext) {
       setLocationState(
-        "Chưa thể lấy vị trí trên kết nối này. Bạn nhập địa chỉ đầy đủ để tiệm giao hàng nhé.",
+        "Bạn mở trang bằng HTTPS và cho phép định vị tại nơi nhận hàng để tiệm tính phí ship nhé.",
       );
       return;
     }
     if (!navigator.geolocation) {
       setLocationState(
-        "Trình duyệt chưa hỗ trợ định vị. Bạn có thể nhập địa chỉ để tiếp tục.",
+        "Trình duyệt chưa hỗ trợ định vị. Bạn mở bằng trình duyệt có định vị để tiệm tính phí ship nhé.",
       );
       return;
     }
@@ -133,7 +162,7 @@ export function CheckoutSheet({
       () => {
         if (generation !== locationGeneration.current) return;
         setLocationState(
-          "Chưa lấy được vị trí. Bạn có thể bật quyền trong trình duyệt hoặc nhập địa chỉ đầy đủ để tiếp tục.",
+          "Chưa lấy được vị trí. Bạn bật quyền vị trí trong trình duyệt rồi nhấn lấy lại để tiệm tính phí ship nhé.",
         );
         setLocating(false);
       },
@@ -161,14 +190,20 @@ export function CheckoutSheet({
     locationGeneration.current++;
     setLocating(false);
     setCustomer((c) => ({ ...c, location: null }));
-    setLocationState("Tiệm sẽ giao theo địa chỉ bạn nhập ở trên.");
+    setLocationState("Bạn ghim lại vị trí tại nơi nhận hàng để tiệm tính phí ship nhé.");
   }
+  function backToDetails() {
+    setReview(null);
+    key.current = newCheckoutKey();
+    saveLocal("milk-checkout-key", key.current);
+  }
+  const currentQuote = review?.quote ?? acceptedQuote;
   return (
     <Modal
       dialogRef={dialogRef}
-      title="Tiệm giao đến đâu?"
-      eyebrow="Chỉ một bước nhỏ nữa thôi"
-      onClose={() => dismiss()}
+      title={review ? "Chuyện ship, tiệm nhắn bạn nè 💙" : "Tiệm giao đến đâu?"}
+      eyebrow={review ? "Bạn đồng ý rồi tiệm mới lên đơn nhé" : "Chỉ một bước nhỏ nữa thôi"}
+      onClose={review ? backToDetails : () => dismiss()}
       busy={isPending}
       footer={
         <div className="[&>div[role=alert]]:mt-0 [&>div[role=alert]]:mb-3 [&>div[role=alert]]:max-h-[25dvh] [&>div[role=alert]]:overflow-y-auto landscape:[&_small]:hidden mobile:group-data-[compact=true]/sheet:[&_small]:hidden">
@@ -181,18 +216,18 @@ export function CheckoutSheet({
             </div>
           )}
           <div className="flex items-center justify-between pb-3.5 text-[13px] [&_strong]:text-xl [&_strong]:text-blue mobile:gap-3 mobile:text-sm mobile:[&_strong]:text-[22px] mobile:[&_strong]:whitespace-nowrap mobile:group-data-[compact=true]/sheet:pb-2.5">
-            <span>Tổng thanh toán</span>
-            <strong>{money(acceptedQuote.total)}</strong>
+            <span>{review ? "Tổng thanh toán tại tiệm" : "Tiền món · chưa gồm ship"}</span>
+            <strong>{money(currentQuote.total)}</strong>
           </div>
           <div className="flex items-center gap-2.5 [&>button[type=submit]]:flex-1 mobile:gap-2 mobile:[&>button]:gap-[7px] mobile:[&>button]:p-3 mobile:[&>button]:text-[13px] mobile:[&>button[type=button]]:min-w-12 tiny:[&>button[type=button]]:gap-0 tiny:[&>button[type=button]]:px-2.5 tiny:[&>button[type=button]]:text-[0px] tiny:[&>button[type=button]_svg]:w-5 tiny:[&>button[type=submit]]:px-[9px] tiny:[&>button[type=submit]]:text-xs">
             <Button
               variant="secondary"
               type="button"
-              onClick={() => dismiss(onBack)}
+              onClick={review ? backToDetails : () => dismiss(onBack)}
               disabled={isPending}
             >
               <ArrowLeft size={18} />
-              Giỏ hàng
+              {review ? "Sửa thông tin" : "Giỏ hàng"}
             </Button>
             <Button
               variant="primary"
@@ -202,12 +237,12 @@ export function CheckoutSheet({
               disabled={isPending || !ready || locating}
             >
               {isPending
-                ? "Tiệm đang nhận đơn…"
+                ? review ? "Tiệm đang nhận đơn…" : "Tiệm đang tính ship…"
                 : locating
                   ? "Đang lấy vị trí…"
-                  : paymentMethod === "cod"
-                    ? "Đặt hàng"
-                    : "Đặt hàng"}
+                  : review
+                    ? "Đồng ý & đặt hàng"
+                    : "Xem phí giao hàng"}
               {isPending || locating ? (
                 <LoaderCircle size={18} className="animate-spin" />
               ) : (
@@ -218,7 +253,44 @@ export function CheckoutSheet({
         </div>
       }
     >
-      <form
+      {review && review.quote.delivery ? (
+        <form id={formId} action={formAction} className="space-y-5 p-7 mobile:p-4">
+          <div ref={reviewRef} tabIndex={-1} className="rounded-xl border border-line bg-blue-light p-5">
+            <p className="text-base leading-8 text-ink">{deliveryMessage(review.quote.delivery)}</p>
+            <p className="mt-3 text-xs leading-6 text-muted">
+              Khoảng cách theo đường chim bay: {distanceFormatter.format(review.quote.delivery.distanceKm)} km.
+              {" "}Tiệm tính phí theo khoảng cách thực tế trước khi làm tròn số hiển thị.
+            </p>
+          </div>
+          <div className="text-sm leading-7 text-muted">
+            <p className="font-semibold text-ink">{review.customer.name} · {review.customer.phone}</p>
+            <p>{review.customer.address}</p>
+          </div>
+          <ul className="divide-y divide-line text-sm">
+            {review.quote.lines.map((line) => (
+              <li key={line.key} className="flex justify-between gap-4 py-2">
+                <span>{line.quantity} × {line.name}{line.toppings.length ? ` · ${line.toppings.map((t) => t.name).join(", ")}` : ""}</span>
+                <span className="shrink-0">{money(line.total)}</span>
+              </li>
+            ))}
+          </ul>
+          <dl className="space-y-2 border-t border-line pt-4 text-sm">
+            <div className="flex justify-between gap-4"><dt>Tiền món</dt><dd>{money(review.quote.subtotal)}</dd></div>
+            <div className="flex justify-between gap-4">
+              <dt>{review.quote.delivery.mode === "external" ? "Ship ngoài" : "Phí giao hàng"}</dt>
+              <dd>{review.quote.delivery.mode === "external" ? "Bạn tự book, trả phí riêng" : review.quote.deliveryFee ? money(review.quote.deliveryFee) : "Tiệm freeship 💙"}</dd>
+            </div>
+          </dl>
+          <p className="text-sm leading-7 text-muted">
+            {review.paymentMethod === "bank_transfer"
+              ? "Sau khi bạn đồng ý, tiệm sẽ lên đơn và hiện mã QR cùng tổng tiền cuối để bạn chuyển khoản nhé."
+              : "Bạn thanh toán tổng tiền tại tiệm khi nhận món nhé."}
+          </p>
+          {review.quote.delivery.mode === "external" && (
+            <p className="text-sm leading-7 text-ink">Shipper đến lấy tại {settings.address}. Bạn nhớ thống nhất việc thu hộ tiền món với shipper nếu chọn COD nhé.</p>
+          )}
+        </form>
+      ) : <form
         id={formId}
         action={formAction}
         className="px-7 pt-[23px] pb-7 [&>p]:mb-[23px] [&>p]:text-[11px] [&>p]:leading-[1.9] [&>p]:text-muted [&_label]:mb-[18px] [&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label]:text-[11px] [&_label]:font-semibold [&_input]:h-[45px] [&_input]:min-h-[45px] [&_input]:w-full [&_input]:rounded-[5px] [&_input]:border [&_input]:border-[#cedcde] [&_input]:bg-white [&_input]:px-3 [&_input]:py-2.5 [&_input]:text-xs [&_input]:leading-normal [&_input]:font-normal [&_input]:text-ink [&_textarea]:min-h-[45px] [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-[5px] [&_textarea]:border [&_textarea]:border-[#cedcde] [&_textarea]:bg-white [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-xs [&_textarea]:leading-[1.6] [&_textarea]:font-normal [&_textarea]:text-ink [&_input::placeholder]:text-[11px] [&_input::placeholder]:text-[#9caaac] [&_textarea::placeholder]:text-[11px] [&_textarea::placeholder]:text-[#9caaac] mobile:pt-5 mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pb-6 mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:[&>p]:mb-6 mobile:[&>p]:text-sm mobile:[&>p]:leading-[1.8] mobile:[&_label]:mb-5 mobile:[&_label]:gap-[9px] mobile:[&_label]:text-sm mobile:[&_input]:h-[45px] mobile:[&_input]:min-h-[45px] mobile:[&_input]:rounded-[9px] mobile:[&_input]:px-3 mobile:[&_input]:py-2.5 mobile:[&_input]:text-base mobile:[&_input]:leading-normal mobile:[&_textarea]:min-h-[45px] mobile:[&_textarea]:rounded-[9px] mobile:[&_textarea]:px-3 mobile:[&_textarea]:py-2.5 mobile:[&_textarea]:text-base mobile:[&_textarea]:leading-[1.65] mobile:[&_input::placeholder]:text-sm mobile:[&_textarea::placeholder]:text-sm low:group-data-[compact=true]/sheet:[&_textarea]:h-[45px] low:group-data-[compact=true]/sheet:[&_textarea]:min-h-[45px] low:group-data-[compact=true]/sheet:[&_textarea]:py-2.5 low:group-data-[compact=true]/sheet:[&_textarea]:leading-[1.5]"
@@ -284,7 +356,7 @@ export function CheckoutSheet({
             <strong>
               {customer.location
                 ? "Đã ghim vị trí hiện tại"
-                : "Ghim vị trí để tiệm dễ tìm bạn"}
+                : "Ghim vị trí nhận hàng để tính phí ship"}
             </strong>
             <p role="status" aria-live="polite">
               {locationState ||
@@ -311,7 +383,7 @@ export function CheckoutSheet({
                 disabled={isPending}
                 className="ml-3"
               >
-                {locating ? "Nhập địa chỉ thủ công" : "Bỏ ghim vị trí"}
+                {locating ? "Dừng định vị" : "Bỏ ghim vị trí"}
               </Button>
             )}
             {customer.location && (
@@ -324,7 +396,7 @@ export function CheckoutSheet({
                 >
                   Xem vị trí trên bản đồ
                 </a>
-                {" · "}Nếu nhận ở nơi khác, hãy bỏ ghim và nhập đúng địa chỉ.
+                {" · "}Nếu nhận ở nơi khác, hãy ghim lại tại nơi nhận và nhập đúng địa chỉ nhé.
               </p>
             )}
           </div>
@@ -386,51 +458,12 @@ export function CheckoutSheet({
                 <strong>Chuyển khoản ngân hàng (QR)</strong>
                 <small>
                   {settings.qrImage
-                    ? "Quét mã QR chuyển khoản tiện lợi"
+                    ? "QR hiện sau khi bạn xác nhận phí ship và đặt đơn"
                     : "Tiệm chưa cấu hình mã QR"}
                 </small>
               </div>
             </button>
           </div>
-
-          {paymentMethod === "bank_transfer" && settings.qrImage && (
-            <div className="mt-3.5 animate-fade-in rounded-lg border border-dashed border-[#a2c6cc] bg-[#f3f8f9] p-4">
-              <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-blue">
-                <QrCode size={18} />
-                <span>Mã QR chuyển khoản của tiệm</span>
-              </div>
-              <div className="grid grid-cols-[130px_1fr] items-center gap-4 mobile:grid-cols-[110px_1fr] mobile:gap-3.5">
-                <a
-                  href={settings.qrImage}
-                  download="qr-tiem-sua.png"
-                  className="flex flex-col items-center gap-1.5 rounded-md border border-[#d9e6e8] bg-white p-2 no-underline shadow-[0_2px_6px_#0000000a] [&_span]:text-[9px] [&_span]:font-medium [&_span]:text-blue"
-                  title="Nhấn để tải hoặc xem ảnh QR"
-                >
-                  <img
-                    src={settings.qrImage}
-                    alt="Mã QR chuyển khoản ngân hàng"
-                    className="aspect-square w-full rounded object-contain"
-                  />
-                  <span>Chạm để lưu / mở to</span>
-                </a>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-baseline gap-2 text-[11px] text-ink [&_strong]:text-base [&_strong]:font-bold [&_strong]:text-blue mobile:[&_strong]:text-[15px]">
-                    <span>Số tiền cần chuyển:</span>
-                    <strong>{money(acceptedQuote.total)}</strong>
-                  </div>
-                  {settings.paymentNote && (
-                    <p className="m-0 rounded-md border border-[#e2ebeb] bg-white px-2.5 py-2 text-[11px] leading-[1.6] text-[#4f6367] mobile:text-xs">
-                      {settings.paymentNote}
-                    </p>
-                  )}
-                  <p className="m-0 text-[10px] leading-[1.6] text-muted">
-                    💡 Sau khi bấm <b>Đặt hàng & Chuyển khoản</b>, tiệm sẽ hiển
-                    thị mã đơn riêng để bạn gửi ảnh bill xác nhận.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {paymentMethod === "cod" && (
             <div className="mt-3.5 flex animate-fade-in items-start gap-3 rounded-lg border border-[#cce5cb] bg-[#f1f8f0] px-4 py-3.5 text-[#27672a] [&_strong]:mb-1 [&_strong]:block [&_strong]:text-xs [&_strong]:font-semibold [&_p]:m-0 [&_p]:text-[11px] [&_p]:leading-[1.6] [&_p]:text-[#3b5e3c] mobile:rounded-[10px] mobile:p-3.5 mobile:[&_strong]:text-sm mobile:[&_p]:text-xs">
@@ -438,14 +471,13 @@ export function CheckoutSheet({
               <div>
                 <strong>Thanh toán tiền mặt khi nhận hàng</strong>
                 <p>
-                  Bạn chuẩn bị <b>{money(acceptedQuote.total)}</b> tiền mặt khi
-                  shipper giao tới. Tiệm sẽ chuẩn bị đơn ngay!
+                  Tiệm sẽ báo tổng tiền sau khi tính phí ship. Bạn xác nhận rồi tiệm mới nhận đơn nhé!
                 </p>
               </div>
             </div>
           )}
         </fieldset>
-      </form>
+      </form>}
     </Modal>
   );
 }

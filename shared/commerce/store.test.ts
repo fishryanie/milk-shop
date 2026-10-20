@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import type { Db, MongoClient } from "mongodb";
 import { CommerceStore } from "./store";
 import { defaultSettings, type Quote, type ShopOrder } from "./types";
+import { SHOP_LOCATION } from "./delivery";
+import { quoteCart } from "./quote";
 
 function fixture(options: { retry?: boolean; failCommit?: boolean } = {}) {
   let saved: unknown;
@@ -30,7 +32,8 @@ function fixture(options: { retry?: boolean; failCommit?: boolean } = {}) {
   store.quote = async () => ({ valid: true, digest: "a".repeat(64) } as Quote);
   const input = {
     cart: [{ productId: "507f1f77bcf86cd799439012", quantity: 1, toppingIds: [] }],
-    customer: { name: "Khách thử", phone: "0900000000", address: "123 Đường Thử", note: "", location: null },
+    customer: { name: "Khách thử", phone: "0900000000", address: "123 Đường Thử", note: "", location: { ...SHOP_LOCATION, accuracy: 10 } },
+    shippingConfirmed: true,
     paymentMethod: "cod", digest: "a".repeat(64),
     idempotencyKey: "8c03c9e1-54ea-4b19-bbca-b55d57313303",
   };
@@ -76,4 +79,37 @@ test("yêu cầu trùng mã nhưng khác nội dung không gửi thông báo", a
   await expect(f.store.checkout({ ...f.input, customer: { ...f.input.customer, note: "đổi" } }, "owner", onCreated))
     .rejects.toThrow("Mã gửi đơn đã dùng cho nội dung khác");
   expect(notifications).toBe(1);
+});
+
+test("checkout tính lại ship từ tọa độ, lưu đúng tổng tiền cho COD và QR", async () => {
+  const product = {
+    id: "507f1f77bcf86cd799439012", name: "Sữa", category: "Sữa", description: "",
+    price: 25_000, imageUrl: "", badge: "", unit: "ly", status: "available" as const,
+    stock: 10, toppings: [], sortOrder: 0,
+  };
+  for (const paymentMethod of ["cod", "bank_transfer"] as const) {
+    for (const km of [0.5, 2, 4]) {
+      const f = fixture();
+      const settings = { ...defaultSettings, qrImage: "https://example.com/qr.png" };
+      f.store.settings = async () => settings;
+      f.store.quote = async (cart, _session, currentSettings, location) =>
+        quoteCart(cart, [product], currentSettings ?? settings, location);
+      const customer = { ...f.input.customer, location: {
+        ...SHOP_LOCATION, lat: SHOP_LOCATION.lat + km / 6371 * 180 / Math.PI, accuracy: 10,
+      } };
+      const quote = quoteCart(f.input.cart, [product], settings, customer.location);
+      const order = await f.store.checkout({ ...f.input, customer, paymentMethod, digest: quote.digest }, "owner");
+      expect(order.quote.total).toBe(km === 2 ? 35_000 : 25_000);
+      expect(order.quote.delivery?.mode).toBe(km < 1 ? "free" : km <= 3 ? "local" : "external");
+      expect(order.status).toBe(paymentMethod === "cod" ? "preparing" : "awaiting_payment");
+      expect(Boolean(order.payment?.qrImage)).toBe(paymentMethod === "bank_transfer");
+    }
+  }
+});
+
+test("không trừ tồn khi khách dùng báo giá chưa tính vị trí hoặc đổi vị trí sau khi xác nhận", async () => {
+  const f = fixture();
+  f.store.quote = async () => ({ valid: true, digest: "b".repeat(64) } as Quote);
+  await expect(f.store.checkout(f.input, "owner")).rejects.toThrow("Giá, topping hoặc tồn hàng vừa thay đổi");
+  expect(f.writes()).toBe(0);
 });

@@ -14,15 +14,15 @@ export function DeliveryPolicy({ compact = false }: { compact?: boolean }) {
         className={`mt-4 grid gap-4 text-xs leading-[1.8] mobile:text-[13px] ${compact ? "" : "grid-cols-3 mobile:grid-cols-1"}`}
       >
         <div>
-          <dt className="font-semibold">Trong phạm vi 1km</dt>
+          <dt className="font-semibold">Dưới 1km</dt>
           <dd className="mt-1 text-muted">
-            Miễn phí giao hàng cho đơn từ 60.000đ.
+            Gần tiệm một chút, được thương thêm một chút: freeship cho bạn yêu!
           </dd>
         </div>
         <div>
-          <dt className="font-semibold">Dưới 3km</dt>
+          <dt className="font-semibold">Từ 1–3km</dt>
           <dd className="mt-1 text-muted">
-            Với các đơn không thuộc diện miễn phí, bạn hỗ trợ tiệm 10.000đ phí ship nhé.
+            Bạn phụ tiệm 10.000đ phí ship, tiệm mang món ngon đến tận tay nhé.
           </dd>
         </div>
         <div>
@@ -33,7 +33,7 @@ export function DeliveryPolicy({ compact = false }: { compact?: boolean }) {
         </div>
       </dl>
       <p className="mt-4 border-t border-line pt-3 text-xs leading-[1.8] text-muted">
-        Tiệm sẽ xác nhận phí giao hàng theo địa chỉ nhận hàng của bạn.
+        Tiệm tính khoảng cách theo đường chim bay từ vị trí bạn ghim và báo phí để bạn xác nhận trước khi lên đơn.
       </p>
     </section>
   );
