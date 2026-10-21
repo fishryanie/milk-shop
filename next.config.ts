@@ -9,7 +9,12 @@ const localAddresses = Object.values(networkInterfaces()).flatMap((addresses) =>
     .map((address) => address.address),
 );
 const config: NextConfig = {
-  allowedDevOrigins: ["localhost", "127.0.0.1", ...new Set(localAddresses)],
+  allowedDevOrigins: [
+    "localhost",
+    "127.0.0.1",
+    "*.local",
+    ...new Set(localAddresses),
+  ],
   poweredByHeader: false,
   images: { remotePatterns: [{ protocol: "https", hostname: "**" }] },
   serverExternalPackages: ["mongodb", "sharp"],

@@ -3,6 +3,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { CommerceError } from "@/shared/commerce/validation";
 import { store } from "./db";
+import { isLocalDevelopmentOrigin } from "./request-origin";
 function secret() {
   const value = process.env.STOREFRONT_SESSION_SECRET;
   if (!value || value.length < 32)
@@ -43,21 +44,11 @@ export function sameOrigin(request: Request) {
   if (!expected)
     throw new CommerceError("Chưa cấu hình địa chỉ cửa hàng.", 503);
   const origin = request.headers.get("origin");
-  const isLocalOrigin = (url?: string | null) => {
-    if (!url) return false;
-    try {
-      const u = new URL(url);
-      return (
-        ["localhost", "127.0.0.1"].includes(u.hostname) ||
-        u.hostname.startsWith("192.168.") ||
-        u.hostname.startsWith("10.") ||
-        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(u.hostname)
-      );
-    } catch {
-      return false;
-    }
-  };
-  const localDev = process.env.NODE_ENV === "development" && isLocalOrigin(origin);
+  const localDev = isLocalDevelopmentOrigin(
+    origin,
+    request.headers.get("host"),
+    process.env.NODE_ENV,
+  );
   if (
     (!localDev && origin !== new URL(expected).origin) ||
     request.headers.get("sec-fetch-site") === "cross-site"

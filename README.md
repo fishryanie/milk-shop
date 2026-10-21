@@ -15,6 +15,9 @@ Mở http://localhost:3200.
 Để thử trên điện thoại cùng Wi-Fi, mở `http://<IP máy tính>:3200`.
 Dev server tự cho phép các IP IPv4 hiện có trên máy khi khởi động; nếu đổi mạng,
 khởi động lại `bun run dev`. GPS vẫn cần HTTPS khi truy cập bằng IP mạng nội bộ.
+Bạn cũng có thể dùng tên mDNS như `http://rpm1pro.local:3200` khi chạy dev.
+API cho phép origin `.local` trùng host và port đang truy cập; ngoại lệ này
+không áp dụng cho production, nơi `STOREFRONT_ORIGIN` vẫn phải khớp domain thật.
 
 Chạy bản production để đo tốc độ:
 

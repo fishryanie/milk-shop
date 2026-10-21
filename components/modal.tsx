@@ -52,6 +52,7 @@ export function Modal({
   wide = false,
   busy = false,
   compact = false,
+  className = "",
   footer,
   dialogRef,
 }: {
@@ -62,6 +63,7 @@ export function Modal({
   wide?: boolean;
   busy?: boolean;
   compact?: boolean;
+  className?: string;
   footer?: ReactNode;
   dialogRef?: RefObject<HTMLDialogElement | null>;
 }) {
@@ -156,7 +158,7 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      className={`shop-modal group/sheet m-auto w-[calc(100%-36px)] max-w-[590px] max-h-[min(90dvh,var(--sheet-height,90dvh))] overflow-hidden overscroll-contain rounded-[13px] border-0 bg-paper p-0 text-ink shadow-[0_20px_90px_#183a4a40] backdrop:bg-[#1a333a7a] backdrop:backdrop-blur-[5px] mobile:fixed mobile:inset-x-0 mobile:top-auto mobile:bottom-[var(--sheet-offset,0px)] mobile:m-0 mobile:w-full mobile:max-w-full mobile:max-h-[calc(var(--sheet-height,100dvh)-env(safe-area-inset-top,0px)-8px)] mobile:rounded-[18px_18px_0_0] ${wide ? "max-w-[700px] mobile:max-w-full" : ""}`}
+      className={`shop-modal group/sheet m-auto w-[calc(100%-36px)] max-w-[590px] max-h-[min(90dvh,var(--sheet-height,90dvh))] overflow-hidden overscroll-contain rounded-[13px] border-0 bg-paper p-0 text-ink shadow-[0_20px_90px_#183a4a40] backdrop:bg-[#1a333a7a] backdrop:backdrop-blur-[5px] mobile:fixed mobile:inset-x-0 mobile:top-auto mobile:bottom-[var(--sheet-offset,0px)] mobile:m-0 mobile:w-full mobile:max-w-full mobile:max-h-[calc(var(--sheet-height,100dvh)-env(safe-area-inset-top,0px)-8px)] mobile:rounded-[18px_18px_0_0] ${wide ? "max-w-[700px] mobile:max-w-full" : ""} ${className}`}
       aria-labelledby={id}
       onCancel={(e) => {
         e.preventDefault();
