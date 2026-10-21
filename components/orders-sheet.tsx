@@ -4,48 +4,22 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   ArrowLeft,
   ChevronRight,
-  Check,
-  CheckCircle2,
-  Clock3,
-  Copy,
-  PackageCheck,
   RefreshCw,
   ShoppingBag,
-  Truck,
   Upload,
-  XCircle,
 } from "lucide-react";
 import { Modal, useModalMotion } from "./modal";
 import { api } from "@/lib/client";
 import { OrderCelebration } from "./order-celebration";
+import { OrderDetails } from "./order-details";
 import {
   money,
   statusLabels,
-  paymentMethodLabels,
   formatDate,
   formatClock,
   type ShopOrder,
   type ShopSettings,
-  type OrderStatus,
 } from "@/shared/commerce/types";
-const transferFlow: OrderStatus[] = [
-  "awaiting_payment",
-  "payment_review",
-  "paid",
-  "preparing",
-  "delivering",
-  "completed",
-];
-const transferIcons = [
-  Clock3,
-  Upload,
-  CheckCircle2,
-  ShoppingBag,
-  Truck,
-  PackageCheck,
-];
-const codFlow: OrderStatus[] = ["preparing", "delivering", "completed"];
-const codIcons = [ShoppingBag, Truck, PackageCheck];
 export function OrdersSheet({
   settings,
   initialOrder,
@@ -143,6 +117,17 @@ export function OrdersSheet({
     });
   }
 
+  async function copyCode() {
+    if (!active) return;
+    try {
+      await navigator.clipboard.writeText(active.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Bạn có thể chọn và sao chép mã đơn bên dưới.");
+    }
+  }
+
   function upload(file?: File) {
     if (!file || !active || isUploading) return;
     if (
@@ -183,7 +168,7 @@ export function OrdersSheet({
             : "Theo dõi đơn hàng của bạn"
       }
       onClose={() => dismiss()}
-      wide
+      compact
       busy={isUploading}
       footer={
         detailReady && active?.status === "awaiting_payment" ? (
@@ -196,16 +181,17 @@ export function OrdersSheet({
                 {error}
               </p>
             )}
-            <p className="mt-2.5 text-[11px] leading-[1.6] mobile:text-xs">
-              Đã chuyển khoản? Gửi ảnh bill để tiệm xác nhận.
+            <p className="text-xs leading-5 text-muted">
+              Đã chuyển khoản? Gửi ảnh bill (JPG, PNG, WebP · tối đa 3 MB).
             </p>
             <label
-              className={`relative inline-flex h-10 min-h-10 items-center justify-center gap-2 overflow-hidden rounded-lg px-4 text-[13px] font-semibold select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 enabled:active:translate-y-px enabled:active:scale-[.96] mobile:[&>svg]:shrink-0 bg-blue text-white enabled:hover:-translate-y-px enabled:hover:bg-blue-dark enabled:active:translate-y-[1.5px] enabled:active:bg-blue-dark enabled:active:brightness-[.94] enabled:active:shadow-[inset_0_1px_4px_#203d4559] col-span-full w-full cursor-pointer focus-within:outline-3 focus-within:outline-[#64aabc] focus-within:outline-offset-3 [&_input]:absolute [&_input]:inset-0 [&_input]:w-full [&_input]:cursor-pointer [&_input]:opacity-0 mobile:min-h-[52px] mobile:text-sm ${isUploading ? "cursor-not-allowed! opacity-55!" : ""}`}
+              className={`relative inline-flex h-10 min-h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-lg bg-blue px-4 text-[13px] font-semibold text-white transition-colors hover:bg-blue-dark focus-within:outline-2 focus-within:outline-blue/50 focus-within:outline-offset-2 [&_input]:absolute [&_input]:inset-0 [&_input]:size-full [&_input]:cursor-pointer [&_input]:opacity-0 ${isUploading ? "cursor-not-allowed opacity-55" : "cursor-pointer"}`}
             >
               <Upload size={18} />
               {isUploading ? "Đang gửi bill…" : "Tôi đã chuyển khoản · Gửi bill"}
               <input
                 type="file"
+                aria-label="Gửi bill chuyển khoản"
                 accept="image/jpeg,image/png,image/webp"
                 disabled={isUploading}
                 onChange={(e) => {
@@ -215,12 +201,14 @@ export function OrdersSheet({
               />
             </label>
           </div>
+        ) : celebrating && detailReady ? (
+          <Button variant="primary" className="w-full" disabled={isUploading} onClick={() => dismiss()}>Về thực đơn</Button>
         ) : undefined
       }
     >
-      <div className="px-7 pt-[22px] pb-7 mobile:pt-[18px] mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pb-6 mobile:pl-[max(12px,env(safe-area-inset-left,0px))]">
+      <div className="px-5 py-4 mobile:px-3">
         {initialOrder && celebrating && (
-          <OrderCelebration transfer={initialOrder.paymentMethod === "bank_transfer"} />
+          <OrderCelebration awaitingPayment={active?.status === "awaiting_payment"} />
         )}
         {loading && !orders.length ? (
           <div className="flex min-h-[280px] flex-col items-center justify-center gap-[17px] px-5 py-10 text-center [&_svg]:text-[#8aa5ab] [&_h3]:font-serif [&_h3]:text-[27px] [&_p]:max-w-[350px] [&_p]:text-xs [&_p]:leading-[1.8] [&_p]:text-muted mobile:min-h-[260px] mobile:gap-4 mobile:py-[30px] mobile:[&_h3]:leading-[1.3] mobile:[&_p]:text-sm">
@@ -245,7 +233,7 @@ export function OrdersSheet({
                     <li key={order.id}>
                       <button
                         type="button"
-                        className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-line bg-white p-4 text-left transition-colors hover:border-blue hover:bg-blue-light active:bg-blue-light"
+                        className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-line/70 bg-white p-4 text-left transition-colors hover:border-blue/35 hover:bg-blue-light/40 active:bg-blue-light"
                         onClick={() => {
                           setActiveId(order.id);
                           setDetailReadyId("");
@@ -301,204 +289,13 @@ export function OrdersSheet({
               </div>
             )}
             {active && detailReady && (
-              <>
-                <div className="my-[21px] flex items-center justify-between [&_p]:text-[8px] [&_h3]:text-base [&_h3]:tracking-[1px] mobile:my-[18px] mobile:gap-[9px] mobile:[&_p]:text-[10px] mobile:[&_h3]:leading-[1.6] mobile:[&_h3]:tracking-[.4px] mobile:[&_h3]:[overflow-wrap:anywhere]">
-                  <div>
-                    <p className="mb-2.5 text-[9px] font-semibold tracking-[2px] text-blue uppercase mobile:mb-2 mobile:text-[10px] mobile:tracking-[1.4px]">
-                      Mã đơn · {formatDate(active.createdAt)}
-                    </p>
-                    <h3>{active.code}</h3>
-                  </div>
-                  <Button
-                    variant="icon"
-                    aria-label="Cập nhật đơn"
-                    onClick={() => void refresh()}
-                  >
-                    <RefreshCw size={18} />
-                  </Button>
-                </div>
-                {active.status === "awaiting_payment" && (
-                  <section className="grid grid-cols-[1fr_155px] gap-[18px] rounded-[7px] border border-[#d9e7e9] bg-[#edf4f5] p-[21px] [&_h3]:text-[25px] [&_h3]:font-semibold [&_h3]:tracking-[-.5px] [&>small]:col-span-full [&>small]:text-[8px] [&>small]:leading-[1.9] [&>small]:text-[#819396] mobile:grid-cols-1 mobile:gap-5 mobile:rounded-[11px] mobile:p-[18px] mobile:[&_h3]:text-[30px] mobile:[&_h3]:leading-[1.5] mobile:[&>small]:text-xs mobile:[&>small]:leading-[1.8]">
-                    <div className="[&>p:not(:first-child)]:my-[11px] [&>p:not(:first-child)]:text-[10px] [&>p:not(:first-child)]:leading-[1.8] [&>p:not(:first-child)]:text-muted mobile:[&>p:not(:first-child)]:text-[13px]">
-                      <p className="mb-2.5 text-[9px] font-semibold tracking-[2px] text-blue uppercase mobile:mb-2 mobile:text-[10px] mobile:tracking-[1.4px]">
-                        {active.quote.delivery?.mode === "pending" ? "Chuyển khoản tiền món" : "Chuyển khoản cho tiệm"}
-                      </p>
-                      <h3>{money(active.quote.total)}</h3>
-                      {active.quote.delivery?.mode === "pending" && <p>Chỉ gồm tiền món. Tiệm sẽ liên hệ xác nhận phí ship, bạn thanh toán phí ship riêng sau nhé.</p>}
-                      <p>{active.payment?.note || settings.paymentNote}</p>
-                      <button
-                        className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative grid w-full grid-cols-[1fr_auto] gap-1.5 rounded border border-dashed border-[#9ebfc5] bg-white p-2.5 text-left [&_span]:text-[10px] [&_span]:select-all [&_span]:[overflow-wrap:anywhere] [&_small]:text-[8px] [&_small]:text-blue active:scale-[.96] active:border-blue active:bg-[#edf4f5] mobile:min-h-[68px] mobile:gap-[7px] mobile:rounded-lg mobile:p-[13px] mobile:[&_span]:text-[13px] mobile:[&_small]:text-xs"
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(active.code);
-                            setCopied(true);
-                            setTimeout(() => setCopied(false), 2000);
-                          } catch {
-                            setError(
-                              "Bạn có thể chọn và sao chép mã đơn bên dưới.",
-                            );
-                          }
-                        }}
-                      >
-                        <span>{active.code}</span>
-                        {copied ? <Check size={16} /> : <Copy size={16} />}
-                        <small>
-                          {copied ? "Đã sao chép" : "Sao chép nội dung"}
-                        </small>
-                      </button>
-                      <p className="text-[9px]! mobile:text-xs!">
-                        Gửi bill trước {formatClock(active.expiresAt)} để giữ
-                        món.
-                      </p>
-                    </div>
-                    {(active.payment?.qrImage || settings.qrImage) && (
-                      <a
-                        href={active.payment?.qrImage || settings.qrImage}
-                        download="qr-tiem-sua.png"
-                        className="self-start rounded-[5px] border border-line bg-white p-2 text-center [&_img]:max-h-[190px] [&_img]:w-full [&_img]:object-contain [&_span]:mt-[7px] [&_span]:block [&_span]:text-[8px] [&_span]:text-muted mobile:w-[min(100%,240px)] mobile:justify-self-center mobile:rounded-[10px] mobile:p-2.5 mobile:[&_img]:max-h-[290px] mobile:[&_span]:mt-2.5 mobile:[&_span]:text-xs mobile:[&_span]:leading-[1.5]"
-                      >
-                        <img
-                          src={active.payment?.qrImage || settings.qrImage}
-                          alt="Mã QR chuyển khoản do tiệm cung cấp"
-                        />
-                        <span>Chạm để lưu QR</span>
-                      </a>
-                    )}
-
-                    <small>
-                      Ảnh tối đa 3 MB. Tiệm sẽ kiểm tra bill trước khi xác nhận
-                      đã thanh toán. Nếu đã chuyển khoản mà đơn hết hạn, hãy
-                      liên hệ tiệm và cung cấp mã đơn.
-                    </small>
-                  </section>
-                )}
-                {active.paymentMethod === "cod" &&
-                  active.status === "preparing" && (
-                    <section className="grid grid-cols-[1fr_155px] gap-[18px] rounded-[7px] border border-[#d9e7e9] bg-[#edf4f5] p-[21px] [&_h3]:text-[25px] [&_h3]:font-semibold [&_h3]:tracking-[-.5px] [&>small]:col-span-full [&>small]:text-[8px] [&>small]:leading-[1.9] [&>small]:text-[#819396] mobile:grid-cols-1 mobile:gap-5 mobile:rounded-[11px] mobile:p-[18px] mobile:[&_h3]:text-[30px] mobile:[&_h3]:leading-[1.5] mobile:[&>small]:text-xs mobile:[&>small]:leading-[1.8] grid-cols-1! border-[#cde6cc]! bg-[#f2f8f2]! [&_p:first-child]:text-[#2e7d32] [&_h3]:text-[#1e5a22]">
-                      <div className="[&>p:not(:first-child)]:my-[11px] [&>p:not(:first-child)]:text-[10px] [&>p:not(:first-child)]:leading-[1.8] [&>p:not(:first-child)]:text-muted mobile:[&>p:not(:first-child)]:text-[13px]">
-                        <p className="mb-2.5 text-[9px] font-semibold tracking-[2px] text-blue uppercase mobile:mb-2 mobile:text-[10px] mobile:tracking-[1.4px]">
-                          Thanh toán khi nhận hàng (COD)
-                        </p>
-                        <h3>{money(active.quote.total)}</h3>
-                        <p>
-                          {active.quote.delivery?.mode === "pending"
-                            ? "Tiệm đã nhận đơn và sẽ liên hệ xác nhận phí ship. Số tiền trên chỉ gồm tiền món; bạn thanh toán tiền món và phí ship khi nhận hàng nhé."
-                            : "Tiệm đã nhận đơn và đang chuẩn bị món. Vui lòng chuẩn bị đúng số tiền mặt khi shipper giao hàng đến nhé."}
-                        </p>
-                      </div>
-                    </section>
-                  )}
-                {["cancelled", "expired"].includes(active.status) ? (
-                  <div className="my-3.5 flex items-start gap-2.5 rounded-[5px] px-[17px] py-[15px] text-[11px] leading-[1.8] [&_svg]:mt-0.5 [&_svg]:shrink-0 [&_button]:ml-auto [&_button]:p-0 [&_button]:text-[10px] [&_button]:font-semibold [&_button]:whitespace-nowrap [&_button]:underline mobile:p-3.5 mobile:text-[13px] mobile:leading-[1.75] mobile:[&_button]:h-10 mobile:[&_button]:min-h-10 mobile:[&_button]:text-xs bg-[#fbede8] text-[#9f4a3b]">
-                    <XCircle size={22} />
-                    <div>
-                      <strong>{statusLabels[active.status]}</strong>
-                      <p>{active.events.at(-1)?.note}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <ol className="my-6 list-none p-0 [&_li]:relative [&_li]:flex [&_li]:min-h-[54px] [&_li]:items-start [&_li]:gap-3 [&_li]:pb-[15px] [&_li]:text-[#95a4a7] [&_li:not(:last-child)]:before:absolute [&_li:not(:last-child)]:before:top-[29px] [&_li:not(:last-child)]:before:bottom-0 [&_li:not(:last-child)]:before:left-4 [&_li:not(:last-child)]:before:w-px [&_li:not(:last-child)]:before:bg-line [&_li:not(:last-child)]:before:content-[''] [&_li>div]:pt-2 [&_strong]:block [&_strong]:text-[11px] [&_strong]:font-normal [&_li>div>span]:mt-[5px] [&_li>div>span]:block [&_li>div>span]:text-[9px] [&_li>div>span]:leading-[1.8] [&_li>div>span]:text-[#869599] mobile:mt-7 mobile:mb-4 mobile:[&_li]:min-h-[62px] mobile:[&_li]:gap-3.5 mobile:[&_li]:pb-[18px] mobile:[&_li:not(:last-child)]:before:top-[33px] mobile:[&_li:not(:last-child)]:before:left-[18px] mobile:[&_strong]:text-sm mobile:[&_strong]:leading-[1.5] mobile:[&_li>div>span]:text-xs">
-                    {(active.paymentMethod === "cod"
-                      ? codFlow
-                      : transferFlow
-                    ).map((status, index) => {
-                      const currentFlow =
-                        active.paymentMethod === "cod" ? codFlow : transferFlow;
-                      const currentIcons =
-                        active.paymentMethod === "cod"
-                          ? codIcons
-                          : transferIcons;
-                      const Icon = currentIcons[index];
-                      const current = currentFlow.indexOf(active.status);
-                      const event = active.events.find(
-                        (e) => e.status === status,
-                      );
-                      return (
-                        <li
-                          key={status}
-                          className={
-                            index < current
-                              ? "text-blue! [&>span]:border-[#c7dcdf] [&>span]:bg-[#e5f0f0] [&>span]:text-blue"
-                              : index === current
-                                ? "text-ink! [&>span]:border-blue [&>span]:bg-blue [&>span]:text-white [&>span]:shadow-[0_0_0_4px_#e7f0f1] [&_strong]:font-semibold!"
-                                : ""
-                          }
-                        >
-                          <span className="z-1 grid size-[33px] shrink-0 place-items-center rounded-full border border-[#e0e6e1] bg-[#edf0ed] mobile:size-9">
-                            {index < current ? (
-                              <Check size={16} />
-                            ) : (
-                              <Icon size={17} />
-                            )}
-                          </span>
-                          <div>
-                            <strong>{statusLabels[status]}</strong>
-                            {event && (
-                              <span>
-                                {formatClock(event.at)} ·{" "}
-                                {event.note || "Tiệm đã cập nhật đơn."}
-                              </span>
-                            )}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                )}
-                {active.status === "payment_review" && (
-                  <div className="my-3.5 flex items-start gap-2.5 rounded-[5px] px-[17px] py-[15px] text-[11px] leading-[1.8] [&_svg]:mt-0.5 [&_svg]:shrink-0 [&_button]:ml-auto [&_button]:p-0 [&_button]:text-[10px] [&_button]:font-semibold [&_button]:whitespace-nowrap [&_button]:underline mobile:p-3.5 mobile:text-[13px] mobile:leading-[1.75] mobile:[&_button]:h-10 mobile:[&_button]:min-h-10 mobile:[&_button]:text-xs bg-[#edf3ea] text-[#587b55]">
-                    <CheckCircle2 size={22} />
-                    <div>
-                      <strong>Đã nhận bill chuyển khoản</strong>
-                      <p>
-                        Tiệm đang kiểm tra. Trạng thái sẽ tự cập nhật ở đây.
-                      </p>
-                    </div>
-                  </div>
-                )}
-                <div className="mt-[27px] [&_h3]:mb-[18px] [&_h3]:font-serif [&_h3]:text-2xl [&>div]:my-[13px] [&>div]:flex [&>div]:items-start [&>div]:justify-between [&>div]:gap-[15px] [&>div]:text-[11px] [&_small]:mt-[5px] [&_small]:block [&_small]:text-[9px] [&_small]:text-muted [&_b]:font-semibold [&>p]:mt-[22px] [&>p]:border-t [&>p]:border-line [&>p]:pt-[15px] [&>p]:text-[10px] [&>p]:leading-[2] [&>p]:text-muted mobile:[&_h3]:text-[27px] mobile:[&>div]:my-4 mobile:[&>div]:text-sm mobile:[&>div]:leading-[1.7] mobile:[&_small]:text-xs mobile:[&_small]:leading-[1.7] mobile:[&>p]:text-[13px] mobile:[&>p]:leading-[1.9]">
-                  <h3>Món ngon của bạn</h3>
-                  {active.quote.lines.map((l) => (
-                    <div key={l.key}>
-                      <span>
-                        {l.quantity} × {l.name}
-                        <small>
-                          {l.toppings.map((t) => t.name).join(", ")}
-                        </small>
-                      </span>
-                      <b>{money(l.total)}</b>
-                    </div>
-                  ))}
-                  <div>
-                    <span>Phí giao hàng</span>
-                    <span>{active.quote.delivery?.mode === "pending" ? "Tiệm xác nhận sau" : active.quote.delivery?.mode === "external" ? "Bạn tự book ship, trả phí riêng" : money(active.quote.deliveryFee)}</span>
-                  </div>
-                  <div>
-                    <span>Thanh toán</span>
-                    <b>
-                      {paymentMethodLabels[active.paymentMethod] ||
-                        (active.paymentMethod === "cod"
-                          ? "Thanh toán khi nhận hàng (COD)"
-                          : "Chuyển khoản (QR)")}
-                    </b>
-                  </div>
-                  <div className="mt-[18px] border-t border-line pt-[18px] text-[15px]! [&_strong]:text-[19px] [&_strong]:text-blue">
-                    <strong>{active.quote.delivery?.mode === "pending" ? "Tiền món · chưa gồm ship" : "Tổng thanh toán"}</strong>
-                    <strong>{money(active.quote.total)}</strong>
-                  </div>
-                  <p>
-                    <b>{active.customer.name}</b> · {active.customer.phone}
-                    <br />
-                    {active.customer.address}
-                    {active.customer.note && (
-                      <>
-                        <br />
-                        Ghi chú: {active.customer.note}
-                      </>
-                    )}
-                  </p>
-                </div>
-              </>
+              <OrderDetails
+                order={active}
+                settings={settings}
+                copied={copied}
+                onCopy={() => void copyCode()}
+                onRefresh={() => void refresh()}
+              />
             )}
           </>
         )}
@@ -516,9 +313,8 @@ export function OrdersSheet({
             </button>
           </div>
         )}
-        <p className="mt-6 text-center text-[9px] leading-[1.9] text-[#92a0a3] mobile:text-xs mobile:leading-[1.8]">
-          Đơn tự cập nhật mỗi 10 giây. Giữ trình duyệt này để theo dõi đơn; số
-          điện thoại không dùng làm mật khẩu tra cứu.
+        <p className="mt-4 text-xs leading-5 text-muted">
+          Đơn tự cập nhật mỗi 10 giây. Bạn giữ trình duyệt này để theo dõi đơn nhé.
         </p>
       </div>
     </Modal>

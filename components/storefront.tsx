@@ -771,7 +771,7 @@ export function Storefront({
           )}
         </section>
         <div className="mx-auto max-w-[1440px] px-[5.5vw] mb-[60px] mobile:px-3 mobile:mb-[30px]">
-          <DeliveryPolicy />
+          <DeliveryPolicy title="Tiệm giao đến bạn" />
         </div>
       </main>
       <footer
