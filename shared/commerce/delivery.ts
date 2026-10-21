@@ -1,16 +1,16 @@
-import type { Customer, DeliveryQuote } from "./types";
+import type { Customer, DeliveryQuote, CalculatedDeliveryQuote } from "./types";
 
 // The same pin used by the storefront map at 748/30 Thống Nhất.
 export const SHOP_LOCATION = { lat: 10.852523902605594, lng: 106.66730207366463 };
 
-export function deliveryForDistance(distanceKm: number): DeliveryQuote {
+export function deliveryForDistance(distanceKm: number): CalculatedDeliveryQuote {
   if (!Number.isFinite(distanceKm) || distanceKm < 0)
     throw new Error("Khoảng cách giao hàng không hợp lệ.");
   const mode = distanceKm < 1 ? "free" : distanceKm <= 3 ? "local" : "external";
   return { mode, distanceKm, fee: mode === "local" ? 10_000 : 0 };
 }
 
-export function quoteDelivery(location: NonNullable<Customer["location"]>): DeliveryQuote {
+export function quoteDelivery(location: NonNullable<Customer["location"]>): CalculatedDeliveryQuote {
   const radians = (degrees: number) => degrees * Math.PI / 180;
   const latDiff = radians(location.lat - SHOP_LOCATION.lat);
   const lngDiff = radians(location.lng - SHOP_LOCATION.lng);
@@ -21,6 +21,8 @@ export function quoteDelivery(location: NonNullable<Customer["location"]>): Deli
 }
 
 export function deliveryMessage(delivery: DeliveryQuote): string {
+  if (delivery.mode === "pending")
+    return "Bạn đã bỏ qua chia sẻ vị trí. Tiệm sẽ liên hệ xác nhận phí ship theo địa chỉ bạn nhập. Số tiền bên dưới chỉ gồm tiền món, chưa bao gồm phí ship nhé.";
   if (delivery.mode === "free")
     return "Bạn yêu ở gần tiệm quá nè, chưa đến 1 km thôi! Tiệm thương tặng bạn một chuyến freeship, chỉ cần chờ món ngon đến tận tay nhé 💙";
   if (delivery.mode === "local")

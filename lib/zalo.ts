@@ -32,10 +32,12 @@ export function formatZaloOrder(order: ShopOrder): string[] {
     [
       "💰 TỔNG TIỀN",
       `Tiền món: ${money(quote.subtotal)}`,
-      quote.delivery?.mode === "external"
+      quote.delivery?.mode === "pending"
+        ? "Phí giao hàng: Tiệm liên hệ xác nhận sau theo địa chỉ khách nhập (khách bỏ qua vị trí)."
+        : quote.delivery?.mode === "external"
         ? "Giao hàng: Khách tự book ship ngoài đến lấy, phí ship trả riêng."
         : `Phí giao hàng: ${money(quote.deliveryFee)}`,
-      `TỔNG ĐƠN: ${money(quote.total)}`,
+      `${quote.delivery?.mode === "pending" ? "TIỀN MÓN (chưa gồm ship)" : "TỔNG ĐƠN"}: ${money(quote.total)}`,
       ...(order.paymentMethod === "bank_transfer"
         ? ["Chưa xác nhận nhận tiền; chờ khách chuyển khoản và gửi bill.",
           `Giữ món đến: ${formatStamp(order.expiresAt)}`]

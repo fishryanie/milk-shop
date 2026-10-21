@@ -334,7 +334,7 @@ export function Storefront({
   return (
     <>
       <div className="flex h-8 items-center justify-between bg-[#deedf0] px-[max(5.5vw,24px)] text-[10px] tracking-[.5px] text-[#3d6b77] [&>span:last-child]:flex [&>span:last-child]:items-center [&>span:last-child]:gap-[7px] mobile:h-[calc(27px+env(safe-area-inset-top,0px))] mobile:justify-center mobile:pt-[env(safe-area-inset-top,0px)] mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:tracking-[.1px] mobile:[&>span:last-child]:hidden">
-        <span>Một chút ngọt lành, giao đến tận tay.</span>
+        <span>Đặt hàng ngay, giao đến tận tay.</span>
         <span>
           <Heart size={12} /> Từ căn bếp nhỏ của tiệm
         </span>

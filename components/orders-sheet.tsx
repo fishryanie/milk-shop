@@ -265,6 +265,7 @@ export function OrdersSheet({
                           <span className="mt-2 block text-xs font-medium text-blue">{statusLabels[order.status]}</span>
                           <span className="mt-1 block text-xs text-muted">
                             {order.quote.lines.reduce((total, line) => total + line.quantity, 0)} món · {money(order.quote.total)}
+                            {order.quote.delivery?.mode === "pending" && " · chưa gồm ship"}
                           </span>
                         </span>
                         <ChevronRight size={18} className="shrink-0 text-muted" />
@@ -320,9 +321,10 @@ export function OrdersSheet({
                   <section className="grid grid-cols-[1fr_155px] gap-[18px] rounded-[7px] border border-[#d9e7e9] bg-[#edf4f5] p-[21px] [&_h3]:text-[25px] [&_h3]:font-semibold [&_h3]:tracking-[-.5px] [&>small]:col-span-full [&>small]:text-[8px] [&>small]:leading-[1.9] [&>small]:text-[#819396] mobile:grid-cols-1 mobile:gap-5 mobile:rounded-[11px] mobile:p-[18px] mobile:[&_h3]:text-[30px] mobile:[&_h3]:leading-[1.5] mobile:[&>small]:text-xs mobile:[&>small]:leading-[1.8]">
                     <div className="[&>p:not(:first-child)]:my-[11px] [&>p:not(:first-child)]:text-[10px] [&>p:not(:first-child)]:leading-[1.8] [&>p:not(:first-child)]:text-muted mobile:[&>p:not(:first-child)]:text-[13px]">
                       <p className="mb-2.5 text-[9px] font-semibold tracking-[2px] text-blue uppercase mobile:mb-2 mobile:text-[10px] mobile:tracking-[1.4px]">
-                        Chuyển khoản cho tiệm
+                        {active.quote.delivery?.mode === "pending" ? "Chuyển khoản tiền món" : "Chuyển khoản cho tiệm"}
                       </p>
                       <h3>{money(active.quote.total)}</h3>
+                      {active.quote.delivery?.mode === "pending" && <p>Chỉ gồm tiền món. Tiệm sẽ liên hệ xác nhận phí ship, bạn thanh toán phí ship riêng sau nhé.</p>}
                       <p>{active.payment?.note || settings.paymentNote}</p>
                       <button
                         className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative grid w-full grid-cols-[1fr_auto] gap-1.5 rounded border border-dashed border-[#9ebfc5] bg-white p-2.5 text-left [&_span]:text-[10px] [&_span]:select-all [&_span]:[overflow-wrap:anywhere] [&_small]:text-[8px] [&_small]:text-blue active:scale-[.96] active:border-blue active:bg-[#edf4f5] mobile:min-h-[68px] mobile:gap-[7px] mobile:rounded-lg mobile:p-[13px] mobile:[&_span]:text-[13px] mobile:[&_small]:text-xs"
@@ -379,8 +381,9 @@ export function OrdersSheet({
                         </p>
                         <h3>{money(active.quote.total)}</h3>
                         <p>
-                          Tiệm đã nhận đơn và đang chuẩn bị món. Vui lòng chuẩn
-                          bị đúng số tiền mặt khi shipper giao hàng đến nhé.
+                          {active.quote.delivery?.mode === "pending"
+                            ? "Tiệm đã nhận đơn và sẽ liên hệ xác nhận phí ship. Số tiền trên chỉ gồm tiền món; bạn thanh toán tiền món và phí ship khi nhận hàng nhé."
+                            : "Tiệm đã nhận đơn và đang chuẩn bị món. Vui lòng chuẩn bị đúng số tiền mặt khi shipper giao hàng đến nhé."}
                         </p>
                       </div>
                     </section>
@@ -468,7 +471,7 @@ export function OrdersSheet({
                   ))}
                   <div>
                     <span>Phí giao hàng</span>
-                    <span>{active.quote.delivery?.mode === "external" ? "Bạn tự book ship, trả phí riêng" : money(active.quote.deliveryFee)}</span>
+                    <span>{active.quote.delivery?.mode === "pending" ? "Tiệm xác nhận sau" : active.quote.delivery?.mode === "external" ? "Bạn tự book ship, trả phí riêng" : money(active.quote.deliveryFee)}</span>
                   </div>
                   <div>
                     <span>Thanh toán</span>
@@ -480,7 +483,7 @@ export function OrdersSheet({
                     </b>
                   </div>
                   <div className="mt-[18px] border-t border-line pt-[18px] text-[15px]! [&_strong]:text-[19px] [&_strong]:text-blue">
-                    <strong>Tổng thanh toán</strong>
+                    <strong>{active.quote.delivery?.mode === "pending" ? "Tiền món · chưa gồm ship" : "Tổng thanh toán"}</strong>
                     <strong>{money(active.quote.total)}</strong>
                   </div>
                   <p>

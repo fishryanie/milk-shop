@@ -6,6 +6,7 @@ import type {
   ShopProduct,
   ShopSettings,
   Customer,
+  DeliveryQuote,
 } from "./types";
 import { cartKey } from "./types";
 import { quoteDelivery } from "./delivery";
@@ -14,6 +15,7 @@ export function quoteCart(
   products: ShopProduct[],
   settings: ShopSettings,
   location?: Customer["location"],
+  shippingDeferred = false,
 ): Quote {
   const amounts = new Map<string, number>();
   for (const line of cart)
@@ -65,7 +67,9 @@ export function quoteCart(
     };
   });
   const subtotal = lines.reduce((sum, l) => sum + l.total, 0);
-  const delivery = location ? quoteDelivery(location) : undefined;
+  const delivery: DeliveryQuote | undefined = location
+    ? quoteDelivery(location)
+    : shippingDeferred ? { mode: "pending", fee: 0 } : undefined;
   const deliveryFee = delivery?.fee ?? 0;
   const valid =
     settings.isOpen && lines.length > 0 && lines.every((l) => l.available);

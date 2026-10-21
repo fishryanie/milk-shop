@@ -112,15 +112,23 @@ export const customerSchema = z.strictObject({
 export const deliveryCustomerSchema = customerSchema.extend({
   location: customerSchema.shape.location.unwrap(),
 });
-export const cartQuoteSchema = z.strictObject({ cart: cartSchema, customer: deliveryCustomerSchema });
+const deliveryChoice = {
+  customer: customerSchema,
+  shippingDeferred: z.boolean().default(false),
+};
+const hasDeliveryChoice = (input: { customer: { location: unknown }; shippingDeferred: boolean }) =>
+  Boolean(input.customer.location) || input.shippingDeferred;
+const deliveryChoiceError = { message: "Chọn vị trí nhận hàng hoặc bỏ qua để tiệm xác nhận phí ship sau.", path: ["customer", "location"] };
+export const cartQuoteSchema = z.strictObject({ cart: cartSchema, ...deliveryChoice })
+  .refine(hasDeliveryChoice, deliveryChoiceError);
 export const checkoutSchema = z.strictObject({
   cart: cartSchema,
-  customer: deliveryCustomerSchema,
+  ...deliveryChoice,
   shippingConfirmed: z.literal(true),
   paymentMethod: z.enum(["cod", "bank_transfer"]).default("bank_transfer"),
   digest: z.string().regex(/^[a-f0-9]{64}$/),
   idempotencyKey: z.uuid(),
-});
+}).refine(hasDeliveryChoice, deliveryChoiceError);
 export class CommerceError extends Error {
   constructor(
     message: string,

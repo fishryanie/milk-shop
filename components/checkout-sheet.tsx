@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "./button";
+import dynamic from "next/dynamic";
 import {
   useActionState,
   useCallback,
@@ -16,10 +17,10 @@ import {
   LoaderCircle,
   MapPin,
   QrCode,
-  ShieldCheck,
 } from "lucide-react";
 import { Modal, useModalMotion } from "./modal";
 import { DeliveryPolicy } from "./delivery-policy";
+import { DeliveryDetailsForm } from "./delivery-details-form";
 import {
   api,
   ApiError,
@@ -37,6 +38,7 @@ import {
   type ShopSettings,
 } from "@/shared/commerce/types";
 import { deliveryMessage } from "@/shared/commerce/delivery";
+import { requestDeliveryLocation } from "@/lib/delivery-location";
 const blank: Customer = {
   name: "",
   phone: "",
@@ -45,6 +47,11 @@ const blank: Customer = {
   location: null,
 };
 const distanceFormatter = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 });
+type CheckoutStep = "customer" | "permission" | "details";
+const DeliveryLocationPicker = dynamic(
+  () => import("./delivery-location-picker").then((m) => m.DeliveryLocationPicker),
+  { ssr: false, loading: () => <p role="status" className="mb-6 text-sm text-muted">Đang mở bản đồ…</p> },
+);
 export function CheckoutSheet({
   cart,
   quote,
@@ -68,6 +75,8 @@ export function CheckoutSheet({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [ready, setReady] = useState(false);
   const [locationState, setLocationState] = useState("");
+  const [step, setStep] = useState<CheckoutStep>("customer");
+  const [locationMode, setLocationMode] = useState<"current" | "other" | "skipped">("current");
   const acceptedQuote = useRef(quote).current;
   const [locating, setLocating] = useState(false);
   const [review, setReview] = useState<{
@@ -77,13 +86,21 @@ export function CheckoutSheet({
   } | null>(null);
   const key = useRef("");
   const locationGeneration = useRef(0);
+  const locationAbort = useRef<AbortController | null>(null);
   const reviewRef = useRef<HTMLDivElement>(null);
+  const detailsRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     if (!review) return;
     dialogRef.current?.querySelector("[data-modal-scroll]")?.scrollTo({ top: 0 });
     reviewRef.current?.focus();
   }, [review, dialogRef]);
+  useEffect(() => {
+    if (review) return;
+    dialogRef.current?.querySelector("[data-modal-scroll]")?.scrollTo({ top: 0 });
+    const intro = step === "details" ? detailsRef.current : dialogRef.current?.querySelector<HTMLElement>("[data-step-intro]");
+    intro?.focus();
+  }, [step, review, dialogRef]);
 
   const [error, formAction, isPending] = useActionState(
     async (_prevState: string | null, _formData?: FormData) => {
@@ -91,11 +108,13 @@ export function CheckoutSheet({
         document.activeElement.blur();
       try {
         if (!review) {
-          if (!customer.location)
-            return "Bạn yêu bật định vị tại nơi nhận hàng để tiệm tính phí ship trước nhé.";
+          if (!customer.location && locationMode !== "skipped")
+            return locationMode === "other"
+              ? "Bạn chọn và xác nhận nơi nhận trên bản đồ để tiệm tính phí ship nhé."
+              : "Bạn yêu bật định vị tại nơi nhận hàng để tiệm tính phí ship trước nhé.";
           const deliveryQuote = await api<Quote>("/api/cart", {
             method: "POST",
-            body: JSON.stringify({ cart, customer }),
+            body: JSON.stringify({ cart, customer, shippingDeferred: locationMode === "skipped" }),
           });
           if (!deliveryQuote.valid || !deliveryQuote.delivery) {
             dismiss(onChanged);
@@ -112,6 +131,7 @@ export function CheckoutSheet({
             paymentMethod: review.paymentMethod,
             digest: review.quote.digest,
             shippingConfirmed: true,
+            shippingDeferred: review.quote.delivery?.mode === "pending",
             idempotencyKey: key.current,
           }),
         });
@@ -127,48 +147,42 @@ export function CheckoutSheet({
     null,
   );
 
-  const locate = useCallback(() => {
-    if (!window.isSecureContext) {
-      setLocationState(
-        "Bạn mở trang bằng HTTPS và cho phép định vị tại nơi nhận hàng để tiệm tính phí ship nhé.",
-      );
-      return;
-    }
-    if (!navigator.geolocation) {
-      setLocationState(
-        "Trình duyệt chưa hỗ trợ định vị. Bạn mở bằng trình duyệt có định vị để tiệm tính phí ship nhé.",
-      );
-      return;
-    }
+  function changeStep(nextStep: CheckoutStep, update?: () => void) {
+    const enter = () => {
+      update?.();
+      setStep(nextStep);
+    };
+    if (nextStep === step) enter();
+    else dismiss(enter);
+  }
+
+  async function locate() {
     const generation = ++locationGeneration.current;
+    locationAbort.current?.abort();
+    const controller = new AbortController();
+    locationAbort.current = controller;
     setLocating(true);
+    setCustomer((c) => ({ ...c, location: null }));
     setLocationState("Đang lấy vị trí của bạn…");
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (generation !== locationGeneration.current) return;
-        setCustomer((c) => ({
-          ...c,
-          location: {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-          },
-        }));
-        setLocationState(
-          `Đã ghim vị trí · độ chính xác khoảng ${Math.round(position.coords.accuracy)} m`,
-        );
-        setLocating(false);
-      },
-      () => {
-        if (generation !== locationGeneration.current) return;
-        setLocationState(
-          "Chưa lấy được vị trí. Bạn bật quyền vị trí trong trình duyệt rồi nhấn lấy lại để tiệm tính phí ship nhé.",
-        );
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
-    );
-  }, []);
+    try {
+      const location = await requestDeliveryLocation({
+        isSecureContext: window.isSecureContext,
+        geolocation: navigator.geolocation,
+        signal: controller.signal,
+      });
+      if (generation !== locationGeneration.current) return;
+      changeStep("details", () => {
+        setCustomer((c) => ({ ...c, location }));
+        setLocationMode("current");
+        setLocationState(`Đã ghim vị trí · độ chính xác khoảng ${Math.round(location.accuracy)} m`);
+      });
+    } catch (err) {
+      if (generation !== locationGeneration.current) return;
+      setLocationState(err instanceof Error ? err.message : "Chưa lấy được vị trí. Bạn nhấn thử lại nhé.");
+    } finally {
+      if (generation === locationGeneration.current) setLocating(false);
+    }
+  }
   useEffect(() => {
     const saved = readSaved<Customer>("milk-customer", blank);
     setCustomer({ ...blank, ...saved, location: null });
@@ -176,11 +190,11 @@ export function CheckoutSheet({
       readSaved<string>("milk-checkout-key", "") || newCheckoutKey();
     saveLocal("milk-checkout-key", key.current);
     setReady(true);
-    locate();
     return () => {
       locationGeneration.current++;
+      locationAbort.current?.abort();
     };
-  }, [locate]);
+  }, []);
   useEffect(() => {
     if (ready) saveLocal("milk-customer", { ...customer, location: null });
   }, [customer, ready]);
@@ -188,21 +202,105 @@ export function CheckoutSheet({
     setCustomer((c) => ({ ...c, [name]: value }));
   function clearLocation() {
     locationGeneration.current++;
+    locationAbort.current?.abort();
     setLocating(false);
     setCustomer((c) => ({ ...c, location: null }));
     setLocationState("Bạn ghim lại vị trí tại nơi nhận hàng để tiệm tính phí ship nhé.");
   }
+  function deliverElsewhere() {
+    clearLocation();
+    changeStep("details", () => {
+      setLocationMode("other");
+      setLocationState("Chọn nơi nhận trên bản đồ để shipper tìm đúng địa chỉ và tiệm tính phí ship.");
+    });
+  }
+  function skipLocation() {
+    clearLocation();
+    changeStep("details", () => {
+      setLocationMode("skipped");
+      setLocationState("Tiệm sẽ giao theo địa chỉ bạn đã nhập và liên hệ xác nhận phí ship sau.");
+    });
+  }
+  const selectDeliveryLocation = useCallback((location: Customer["location"]) => {
+    setCustomer((c) => ({ ...c, location }));
+    setLocationState(location
+      ? "Đã ghim nơi nhận bạn chọn. Tiệm sẽ tính phí ship theo điểm này."
+      : "Bạn xác nhận điểm nhận mới trên bản đồ bên dưới nhé.");
+  }, []);
   function backToDetails() {
     setReview(null);
     key.current = newCheckoutKey();
     saveLocal("milk-checkout-key", key.current);
   }
+  function backToCustomer() {
+    clearLocation();
+    changeStep("customer", backToDetails);
+  }
   const currentQuote = review?.quote ?? acceptedQuote;
+  if (step === "customer") return (
+    <Modal
+      key="customer"
+      dialogRef={dialogRef}
+      title="Thông tin giao hàng"
+      compact
+      className="max-w-[480px]! mobile:max-w-full!"
+      onClose={() => dismiss()}
+      footer={
+        <div className="grid grid-cols-2 gap-2.5">
+          <Button variant="secondary" type="button" onClick={() => dismiss(onBack)}><ArrowLeft size={16} /> Giỏ hàng</Button>
+          <Button variant="primary" type="submit" form={formId} disabled={!ready}>Tiếp tục <ArrowRight size={16} /></Button>
+        </div>
+      }
+    >
+      <DeliveryDetailsForm formId={formId} customer={customer} onChange={field} onContinue={(details) => {
+        changeStep("permission", () => {
+          setCustomer({ ...details, location: null });
+          setLocationState("");
+        });
+      }} />
+    </Modal>
+  );
+  if (step === "permission") return (
+    <Modal
+      key="permission"
+      dialogRef={dialogRef}
+      title="Cho tiệm xin vị trí nhé!"
+      compact
+      className="max-w-[480px]! mobile:max-w-full!"
+      onClose={() => dismiss()}
+      footer={
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_auto] gap-2 [&>button]:min-w-0 [&>button]:gap-1 [&>button]:px-2 [&>button]:whitespace-nowrap [&>button>svg]:shrink-0 mobile:gap-1.5 tiny:[&>button]:px-1 tiny:[&>button]:text-xs">
+          <Button variant="primary" type="button" onClick={() => void locate()} disabled={!ready || locating} aria-busy={locating}>
+            {locating ? <LoaderCircle size={16} className="animate-spin" /> : <LocateFixed size={16} />}
+            {locating ? "Định vị…" : "Cho phép"}
+          </Button>
+          <Button variant="secondary" type="button" onClick={deliverElsewhere}>
+            <MapPin size={16} /> Giao nơi khác
+          </Button>
+          <Button variant="text" type="button" onClick={skipLocation}>
+            Bỏ qua
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-3 px-5 py-4 mobile:px-3 landscape:grid landscape:grid-cols-[.8fr_1.2fr] landscape:items-center landscape:gap-4 landscape:space-y-0 landscape:py-2">
+        <div className="flex items-start gap-2.5 text-[13px] leading-[1.7] text-muted">
+          <MapPin size={22} className="mt-0.5 shrink-0 text-blue" aria-hidden="true" />
+          <p data-step-intro tabIndex={-1}>Chia sẻ vị trí để shipper dễ tìm bạn và tiệm tính đúng phí giao hàng.{" "}
+            <button type="button" onClick={backToCustomer} className="cursor-pointer text-blue underline underline-offset-2">Sửa thông tin</button>
+          </p>
+        </div>
+        <DeliveryPolicy compact />
+        {locationState && <p role="status" aria-live="polite" className="rounded-lg bg-blue-light p-2.5 text-xs leading-5 text-blue landscape:col-span-2">{locationState}</p>}
+      </div>
+    </Modal>
+  );
   return (
     <Modal
+      key="details"
       dialogRef={dialogRef}
-      title={review ? "Chuyện ship, tiệm nhắn bạn nè 💙" : "Tiệm giao đến đâu?"}
-      eyebrow={review ? "Bạn đồng ý rồi tiệm mới lên đơn nhé" : "Chỉ một bước nhỏ nữa thôi"}
+      title={review ? "Chuyện ship, tiệm nhắn bạn nè 💙" : "Vị trí & thanh toán"}
+      eyebrow={review ? "Bạn đồng ý rồi tiệm mới lên đơn nhé" : locationMode === "skipped" ? "Phí ship tiệm xác nhận sau" : "Kiểm tra trước khi tính phí ship"}
       onClose={review ? backToDetails : () => dismiss()}
       busy={isPending}
       footer={
@@ -216,22 +314,23 @@ export function CheckoutSheet({
             </div>
           )}
           <div className="flex items-center justify-between pb-3.5 text-[13px] [&_strong]:text-xl [&_strong]:text-blue mobile:gap-3 mobile:text-sm mobile:[&_strong]:text-[22px] mobile:[&_strong]:whitespace-nowrap mobile:group-data-[compact=true]/sheet:pb-2.5">
-            <span>{review ? "Tổng thanh toán tại tiệm" : "Tiền món · chưa gồm ship"}</span>
+            <span>{review?.quote.delivery?.mode === "pending" ? "Tiền món · chưa gồm ship" : review ? "Tổng thanh toán tại tiệm" : "Tiền món · chưa gồm ship"}</span>
             <strong>{money(currentQuote.total)}</strong>
           </div>
           <div className="flex items-center gap-2.5 [&>button[type=submit]]:flex-1 mobile:gap-2 mobile:[&>button]:gap-[7px] mobile:[&>button]:p-3 mobile:[&>button]:text-[13px] mobile:[&>button[type=button]]:min-w-12 tiny:[&>button[type=button]]:gap-0 tiny:[&>button[type=button]]:px-2.5 tiny:[&>button[type=button]]:text-[0px] tiny:[&>button[type=button]_svg]:w-5 tiny:[&>button[type=submit]]:px-[9px] tiny:[&>button[type=submit]]:text-xs">
             <Button
               variant="secondary"
               type="button"
-              onClick={review ? backToDetails : () => dismiss(onBack)}
+              onClick={review ? backToDetails : backToCustomer}
               disabled={isPending}
             >
               <ArrowLeft size={18} />
-              {review ? "Sửa thông tin" : "Giỏ hàng"}
+              {review ? "Sửa thông tin" : "Thông tin"}
             </Button>
             <Button
               variant="primary"
-              type="submit"
+              type={review || customer.location || locationMode !== "current" ? "submit" : "button"}
+              onClick={!review && !customer.location && locationMode === "current" ? () => void locate() : undefined}
               form={formId}
               aria-busy={isPending}
               disabled={isPending || !ready || locating}
@@ -242,7 +341,7 @@ export function CheckoutSheet({
                   ? "Đang lấy vị trí…"
                   : review
                     ? "Đồng ý & đặt hàng"
-                    : "Xem phí giao hàng"}
+                    : locationMode === "skipped" ? "Tiếp tục" : customer.location || locationMode === "other" ? "Xem phí giao hàng" : "Cho phép lấy vị trí"}
               {isPending || locating ? (
                 <LoaderCircle size={18} className="animate-spin" />
               ) : (
@@ -257,14 +356,15 @@ export function CheckoutSheet({
         <form id={formId} action={formAction} className="space-y-5 p-7 mobile:p-4">
           <div ref={reviewRef} tabIndex={-1} className="rounded-xl border border-line bg-blue-light p-5">
             <p className="text-base leading-8 text-ink">{deliveryMessage(review.quote.delivery)}</p>
-            <p className="mt-3 text-xs leading-6 text-muted">
+            {review.quote.delivery.mode !== "pending" && <p className="mt-3 text-xs leading-6 text-muted">
               Khoảng cách theo đường chim bay: {distanceFormatter.format(review.quote.delivery.distanceKm)} km.
               {" "}Tiệm tính phí theo khoảng cách thực tế trước khi làm tròn số hiển thị.
-            </p>
+            </p>}
           </div>
           <div className="text-sm leading-7 text-muted">
             <p className="font-semibold text-ink">{review.customer.name} · {review.customer.phone}</p>
             <p>{review.customer.address}</p>
+            {review.customer.note && <p className="text-xs">Ghi chú: {review.customer.note}</p>}
           </div>
           <ul className="divide-y divide-line text-sm">
             {review.quote.lines.map((line) => (
@@ -278,11 +378,15 @@ export function CheckoutSheet({
             <div className="flex justify-between gap-4"><dt>Tiền món</dt><dd>{money(review.quote.subtotal)}</dd></div>
             <div className="flex justify-between gap-4">
               <dt>{review.quote.delivery.mode === "external" ? "Ship ngoài" : "Phí giao hàng"}</dt>
-              <dd>{review.quote.delivery.mode === "external" ? "Bạn tự book, trả phí riêng" : review.quote.deliveryFee ? money(review.quote.deliveryFee) : "Tiệm freeship 💙"}</dd>
+              <dd>{review.quote.delivery.mode === "pending" ? "Tiệm xác nhận sau" : review.quote.delivery.mode === "external" ? "Bạn tự book, trả phí riêng" : review.quote.deliveryFee ? money(review.quote.deliveryFee) : "Tiệm freeship 💙"}</dd>
             </div>
           </dl>
           <p className="text-sm leading-7 text-muted">
-            {review.paymentMethod === "bank_transfer"
+            {review.quote.delivery.mode === "pending"
+              ? review.paymentMethod === "bank_transfer"
+                ? "Sau khi đặt đơn, bạn chuyển khoản tiền món theo mã QR. Phí ship được tiệm xác nhận và thanh toán riêng sau nhé."
+                : "Tiệm sẽ liên hệ xác nhận phí ship. Bạn thanh toán tiền món và phí ship khi nhận hàng nhé."
+              : review.paymentMethod === "bank_transfer"
               ? "Sau khi bạn đồng ý, tiệm sẽ lên đơn và hiện mã QR cùng tổng tiền cuối để bạn chuyển khoản nhé."
               : "Bạn thanh toán tổng tiền tại tiệm khi nhận món nhé."}
           </p>
@@ -293,61 +397,16 @@ export function CheckoutSheet({
       ) : <form
         id={formId}
         action={formAction}
-        className="px-7 pt-[23px] pb-7 [&>p]:mb-[23px] [&>p]:text-[11px] [&>p]:leading-[1.9] [&>p]:text-muted [&_label]:mb-[18px] [&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label]:text-[11px] [&_label]:font-semibold [&_input]:h-[45px] [&_input]:min-h-[45px] [&_input]:w-full [&_input]:rounded-[5px] [&_input]:border [&_input]:border-[#cedcde] [&_input]:bg-white [&_input]:px-3 [&_input]:py-2.5 [&_input]:text-xs [&_input]:leading-normal [&_input]:font-normal [&_input]:text-ink [&_textarea]:min-h-[45px] [&_textarea]:w-full [&_textarea]:resize-y [&_textarea]:rounded-[5px] [&_textarea]:border [&_textarea]:border-[#cedcde] [&_textarea]:bg-white [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:text-xs [&_textarea]:leading-[1.6] [&_textarea]:font-normal [&_textarea]:text-ink [&_input::placeholder]:text-[11px] [&_input::placeholder]:text-[#9caaac] [&_textarea::placeholder]:text-[11px] [&_textarea::placeholder]:text-[#9caaac] mobile:pt-5 mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pb-6 mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:[&>p]:mb-6 mobile:[&>p]:text-sm mobile:[&>p]:leading-[1.8] mobile:[&_label]:mb-5 mobile:[&_label]:gap-[9px] mobile:[&_label]:text-sm mobile:[&_input]:h-[45px] mobile:[&_input]:min-h-[45px] mobile:[&_input]:rounded-[9px] mobile:[&_input]:px-3 mobile:[&_input]:py-2.5 mobile:[&_input]:text-base mobile:[&_input]:leading-normal mobile:[&_textarea]:min-h-[45px] mobile:[&_textarea]:rounded-[9px] mobile:[&_textarea]:px-3 mobile:[&_textarea]:py-2.5 mobile:[&_textarea]:text-base mobile:[&_textarea]:leading-[1.65] mobile:[&_input::placeholder]:text-sm mobile:[&_textarea::placeholder]:text-sm low:group-data-[compact=true]/sheet:[&_textarea]:h-[45px] low:group-data-[compact=true]/sheet:[&_textarea]:min-h-[45px] low:group-data-[compact=true]/sheet:[&_textarea]:py-2.5 low:group-data-[compact=true]/sheet:[&_textarea]:leading-[1.5]"
+        className="space-y-5 p-7 mobile:p-4"
       >
-        <p>
-          Cho tiệm xin thông tin để chuẩn bị và giao món. Lần sau tiệm sẽ nhớ
-          trên thiết bị này.
+        <p ref={detailsRef} tabIndex={-1} className="text-sm leading-6 text-muted">
+          {locationMode === "skipped" ? "Chọn cách thanh toán. Tiệm sẽ liên hệ xác nhận phí ship theo địa chỉ của bạn nhé." : "Kiểm tra vị trí nhận hàng và chọn cách thanh toán nhé."}
         </p>
-        <div className="mb-6">
-          <DeliveryPolicy compact />
+        <div className="rounded-xl border border-line bg-white p-4 text-sm leading-6 text-muted">
+          <p className="font-semibold text-ink">{customer.name} · {customer.phone}</p>
+          <p className="break-words">{customer.address}</p>
+          {customer.note && <p className="mt-1 break-words text-xs">Ghi chú: {customer.note}</p>}
         </div>
-        <div className="grid grid-cols-2 gap-[15px] mobile:grid-cols-1 mobile:gap-0">
-          <label>
-            Tên người nhận
-            <input
-              autoComplete="name"
-              enterKeyHint="next"
-              autoCapitalize="words"
-              name="name"
-              required
-              minLength={2}
-              maxLength={80}
-              value={customer.name}
-              onChange={(e) => field("name", e.target.value)}
-              placeholder="Tiệm gọi bạn là…"
-            />
-          </label>
-          <label>
-            Số điện thoại
-            <input
-              type="tel"
-              autoComplete="tel"
-              enterKeyHint="next"
-              inputMode="tel"
-              name="phone"
-              required
-              maxLength={20}
-              value={customer.phone}
-              onChange={(e) => field("phone", e.target.value)}
-              placeholder="09xx xxx xxx"
-            />
-          </label>
-        </div>
-        <label>
-          Địa chỉ giao hàng
-          <textarea
-            autoComplete="street-address"
-            name="address"
-            required
-            minLength={8}
-            maxLength={300}
-            rows={2}
-            value={customer.address}
-            onChange={(e) => field("address", e.target.value)}
-            placeholder="Số nhà, đường, phường/xã, quận/huyện…"
-          />
-        </label>
         <div
           className={`mb-[23px] flex items-start gap-3 rounded-md bg-blue-light p-4 text-blue [&>svg]:mt-0.5 [&>svg]:shrink-0 [&_strong]:text-[11px] [&_p]:mt-[5px] [&_p]:text-[10px] [&_p]:leading-[1.8] [&_p]:text-[#788e93] [&_button]:mt-1 [&_button]:text-[10px] mobile:mb-6 mobile:rounded-[10px] mobile:[&_strong]:text-sm mobile:[&_strong]:leading-[1.6] mobile:[&_p]:text-xs ${customer.location ? "bg-[#edf3e9]! text-green!" : ""}`}
         >
@@ -355,13 +414,14 @@ export function CheckoutSheet({
           <div>
             <strong>
               {customer.location
-                ? "Đã ghim vị trí hiện tại"
-                : "Ghim vị trí nhận hàng để tính phí ship"}
+                ? locationMode === "other" ? "Đã ghim nơi nhận bạn chọn" : "Đã ghim vị trí hiện tại"
+                : locationMode === "skipped" ? "Giao theo địa chỉ đã nhập" : locationMode === "other" ? "Ghim nơi nhận trên bản đồ" : "Ghim vị trí nhận hàng để tính phí ship"}
             </strong>
             <p role="status" aria-live="polite">
               {locationState ||
                 "Tiệm chỉ lấy vị trí khi bạn đồng ý. Hãy ghim tại nơi nhận hàng."}
             </p>
+            {locationMode === "current" && <>
             <Button
               variant="text"
               type="button"
@@ -386,6 +446,24 @@ export function CheckoutSheet({
                 {locating ? "Dừng định vị" : "Bỏ ghim vị trí"}
               </Button>
             )}
+            <Button variant="text" type="button" onClick={deliverElsewhere} disabled={isPending} className="ml-3">
+              Giao nơi khác
+            </Button>
+            </>}
+            {locationMode === "other" && <Button variant="text" type="button" onClick={() => {
+              setLocationMode("current");
+              void locate();
+            }} disabled={locating || isPending}>
+              <LocateFixed size={15} /> Dùng vị trí hiện tại
+            </Button>}
+            {locationMode === "skipped" && <>
+              <Button variant="text" type="button" onClick={() => void locate()} disabled={locating || isPending}>
+                <LocateFixed size={15} /> {locating ? "Đang định vị…" : "Chia sẻ vị trí"}
+              </Button>
+              <Button variant="text" type="button" onClick={deliverElsewhere} disabled={isPending}>
+                Chọn trên bản đồ
+              </Button>
+            </>}
             {customer.location && (
               <p>
                 <a
@@ -396,26 +474,12 @@ export function CheckoutSheet({
                 >
                   Xem vị trí trên bản đồ
                 </a>
-                {" · "}Nếu nhận ở nơi khác, hãy ghim lại tại nơi nhận và nhập đúng địa chỉ nhé.
+                {" · "}Bạn nhớ nhập địa chỉ khớp với điểm nhận đã ghim nhé.
               </p>
             )}
           </div>
         </div>
-        <label>
-          Lời nhắn cho tiệm{" "}
-          <span className="contents text-[9px] font-normal text-muted">
-            không bắt buộc
-          </span>
-          <textarea
-            name="note"
-            rows={2}
-            maxLength={500}
-            value={customer.note}
-            onChange={(e) => field("note", e.target.value)}
-            placeholder="Ví dụ: gọi mình khi đến, giao ở sảnh nhé…"
-          />
-        </label>
-
+        {locationMode === "other" && <DeliveryLocationPicker location={customer.location} onChange={selectDeliveryLocation} />}
         <fieldset className="mt-1.5 mb-6">
           <legend className="mb-2.5 block text-[11px] font-semibold text-ink mobile:mb-3 mobile:text-sm">
             Phương thức thanh toán
@@ -458,7 +522,7 @@ export function CheckoutSheet({
                 <strong>Chuyển khoản ngân hàng (QR)</strong>
                 <small>
                   {settings.qrImage
-                    ? "QR hiện sau khi bạn xác nhận phí ship và đặt đơn"
+                    ? locationMode === "skipped" ? "QR tiền món hiện sau khi đặt đơn; phí ship xác nhận sau" : "QR hiện sau khi bạn xác nhận phí ship và đặt đơn"
                     : "Tiệm chưa cấu hình mã QR"}
                 </small>
               </div>
@@ -471,7 +535,9 @@ export function CheckoutSheet({
               <div>
                 <strong>Thanh toán tiền mặt khi nhận hàng</strong>
                 <p>
-                  Tiệm sẽ báo tổng tiền sau khi tính phí ship. Bạn xác nhận rồi tiệm mới nhận đơn nhé!
+                  {locationMode === "skipped"
+                    ? "Tiệm sẽ liên hệ xác nhận phí ship theo địa chỉ của bạn. Bạn thanh toán tiền món và phí ship khi nhận hàng nhé."
+                    : "Tiệm sẽ báo tổng tiền sau khi tính phí ship. Bạn xác nhận rồi tiệm mới nhận đơn nhé!"}
                 </p>
               </div>
             </div>

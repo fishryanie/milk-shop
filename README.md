@@ -15,9 +15,18 @@ Mở http://localhost:3200.
 Để thử trên điện thoại cùng Wi-Fi, mở `http://<IP máy tính>:3200`.
 Dev server tự cho phép các IP IPv4 hiện có trên máy khi khởi động; nếu đổi mạng,
 khởi động lại `bun run dev`. GPS vẫn cần HTTPS khi truy cập bằng IP mạng nội bộ.
+Để thử định vị qua Wi-Fi, chạy `bun run dev:https` và mở
+`https://<IP máy tính>:3200`. Chứng chỉ dev phải được thiết bị tin cậy;
+nếu chưa cài chứng chỉ, dùng một URL HTTPS với chứng chỉ hợp lệ để thử.
 Bạn cũng có thể dùng tên mDNS như `http://rpm1pro.local:3200` khi chạy dev.
 API cho phép origin `.local` trùng host và port đang truy cập; ngoại lệ này
 không áp dụng cho production, nơi `STOREFRONT_ORIGIN` vẫn phải khớp domain thật.
+
+Ở bước giao hàng, bấm **Cho phép lấy vị trí** để trình duyệt hỏi quyền, sau đó
+bấm **Xem phí giao hàng**. Nếu đã chặn quyền, trình duyệt sẽ không hỏi lại:
+cần cho phép Vị trí trong cài đặt của trang và bật dịch vụ định vị của thiết bị.
+Màn hình phân biệt lỗi bị chặn quyền, không tìm thấy vị trí và hết thời gian;
+nếu GPS thất bại, app thử lại bằng định vị mạng.
 
 Chạy bản production để đo tốc độ:
 

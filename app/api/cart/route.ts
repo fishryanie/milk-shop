@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     await db.expire();
     return ok(Array.isArray(input)
       ? await db.quote(input)
-      : await db.quote(input.cart, undefined, undefined, input.customer.location));
+      : await db.quote(input.cart, undefined, undefined, input.customer.location, input.shippingDeferred));
   } catch (error) {
     return fail(error);
   }

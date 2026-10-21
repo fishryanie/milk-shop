@@ -81,10 +81,14 @@ export type Quote = {
   digest: string;
   delivery?: DeliveryQuote;
 };
-export type DeliveryQuote = {
+export type CalculatedDeliveryQuote = {
   mode: "free" | "local" | "external";
   distanceKm: number;
   fee: number;
+};
+export type DeliveryQuote = CalculatedDeliveryQuote | {
+  mode: "pending";
+  fee: 0;
 };
 export const orderStatuses = [
   "awaiting_payment",

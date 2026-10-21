@@ -113,3 +113,33 @@ test("không trừ tồn khi khách dùng báo giá chưa tính vị trí hoặc
   await expect(f.store.checkout(f.input, "owner")).rejects.toThrow("Giá, topping hoặc tồn hàng vừa thay đổi");
   expect(f.writes()).toBe(0);
 });
+
+test("bỏ qua vị trí lưu đơn COD và QR với phí ship chờ xác nhận, vẫn kiểm tra báo giá", async () => {
+  const product = {
+    id: "507f1f77bcf86cd799439012", name: "Sữa", category: "Sữa", description: "",
+    price: 25_000, imageUrl: "", badge: "", unit: "ly", status: "available" as const,
+    stock: 10, toppings: [], sortOrder: 0,
+  };
+  for (const paymentMethod of ["cod", "bank_transfer"] as const) {
+    const f = fixture();
+    const settings = { ...defaultSettings, qrImage: "https://example.com/qr.png" };
+    f.store.settings = async () => settings;
+    f.store.quote = async (cart, _session, currentSettings, location, shippingDeferred) =>
+      quoteCart(cart, [product], currentSettings ?? settings, location, shippingDeferred);
+    const customer = { ...f.input.customer, location: null };
+    const input = { ...f.input, customer, paymentMethod, shippingDeferred: true };
+    const noShippingChoice = quoteCart(input.cart, [product], settings, null);
+    await expect(f.store.checkout({ ...input, digest: noShippingChoice.digest }, "owner"))
+      .rejects.toThrow("Giá, topping hoặc tồn hàng vừa thay đổi");
+    expect(f.writes()).toBe(0);
+    const quote = quoteCart(input.cart, [product], settings, null, true);
+    const order = await f.store.checkout({ ...input, digest: quote.digest }, "owner");
+    expect(order.customer.location).toBeNull();
+    expect(order.quote.delivery).toEqual({ mode: "pending", fee: 0 });
+    expect(order.quote.total).toBe(25_000);
+    expect(order.quote.subtotal).toBe(25_000);
+    expect(order.status).toBe(paymentMethod === "cod" ? "preparing" : "awaiting_payment");
+    expect(Boolean(order.payment?.qrImage)).toBe(paymentMethod === "bank_transfer");
+    expect(f.writes()).toBe(1);
+  }
+});

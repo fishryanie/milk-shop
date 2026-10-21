@@ -60,6 +60,19 @@ test("chuyển khoản chưa được coi là đã nhận tiền", () => {
   expect(text).not.toContain("Cần thu khi giao:");
 });
 
+test("đơn bỏ qua vị trí nhắc tiệm xác nhận ship, không báo phí ship bằng 0", () => {
+  const value = order();
+  value.customer.location = null;
+  value.quote.delivery = { mode: "pending", fee: 0 };
+  value.quote.deliveryFee = 0;
+  value.quote.total = value.quote.subtotal;
+  const text = formatZaloOrder(value).join("\n");
+  expect(text).toContain("Tiệm liên hệ xác nhận sau");
+  expect(text).toContain("TIỀN MÓN (chưa gồm ship)");
+  expect(text).not.toContain("Phí giao hàng: 0");
+  expect(text).not.toContain("📍 Bản đồ:");
+});
+
 test("đơn tối đa 30 dòng và 12 topping không mất thông tin hoặc vượt giới hạn Zalo", () => {
   const value = order();
   value.customer.name = "K".repeat(80);

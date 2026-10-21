@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
-import { deliveryForDistance, quoteDelivery, SHOP_LOCATION } from "./delivery";
+import { deliveryForDistance, deliveryMessage, quoteDelivery, SHOP_LOCATION } from "./delivery";
 import { quoteCart } from "./quote";
-import { checkoutSchema } from "./validation";
+import { cartQuoteSchema, checkoutSchema } from "./validation";
 import { defaultSettings, type ShopProduct } from "./types";
 
 const product: ShopProduct = {
@@ -64,4 +64,30 @@ test("không nhận đơn thiếu vị trí hoặc chưa đồng ý phí ship", 
   expect(checkoutSchema.safeParse(unconfirmed).success).toBe(false);
   expect(checkoutSchema.safeParse({ ...input, customer: { ...input.customer, location: null } }).success).toBe(false);
   expect(checkoutSchema.safeParse({ ...input, customer: { ...input.customer, location: { ...atDistance(2), lat: 91 } } }).success).toBe(false);
+});
+
+test("bỏ qua vị trí tạo báo giá chờ xác nhận ship, không phải freeship", () => {
+  const pending = quoteCart(cart, [product], defaultSettings, null, true);
+  const unconfirmed = quoteCart(cart, [product], defaultSettings, null);
+  expect(pending.delivery).toEqual({ mode: "pending", fee: 0 });
+  expect(pending.total).toBe(pending.subtotal);
+  expect(pending.digest).not.toBe(unconfirmed.digest);
+  expect(deliveryMessage(pending.delivery!)).toContain("chưa bao gồm phí ship");
+  expect(deliveryMessage(pending.delivery!)).not.toContain("freeship");
+  // Coordinates still take precedence if a client supplies both inputs.
+  expect(quoteCart(cart, [product], defaultSettings, atDistance(2), true).deliveryFee).toBe(10_000);
+});
+
+test("chỉ nhận đơn không có tọa độ khi khách chủ động bỏ qua vị trí", () => {
+  const input = {
+    cart, customer: { name: "Khách yêu", phone: "0900000000", address: "123 Thống Nhất", note: "", location: null },
+    shippingDeferred: true, shippingConfirmed: true, paymentMethod: "cod", digest: "a".repeat(64),
+    idempotencyKey: "8c03c9e1-54ea-4b19-bbca-b55d57313303",
+  };
+  expect(checkoutSchema.safeParse(input).success).toBe(true);
+  expect(checkoutSchema.safeParse({ ...input, shippingDeferred: false }).success).toBe(false);
+  expect(checkoutSchema.safeParse({ ...input, shippingDeferred: "true" }).success).toBe(false);
+  expect(checkoutSchema.safeParse({ ...input, shippingConfirmed: false }).success).toBe(false);
+  expect(cartQuoteSchema.safeParse({ cart, customer: input.customer, shippingDeferred: true }).success).toBe(true);
+  expect(cartQuoteSchema.safeParse({ cart, customer: input.customer }).success).toBe(false);
 });
