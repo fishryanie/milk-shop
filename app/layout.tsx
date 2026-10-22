@@ -22,6 +22,13 @@ export const metadata: Metadata = {
   description:
     "Sữa tuyết mềm mịn, sữa tươi và topping nhà làm. Chọn món, đặt giao tận nơi, theo dõi đơn hàng ngay tại tiệm.",
   robots: { index: true, follow: true },
+  icons: {
+    icon: [
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+  },
   appleWebApp: {
     capable: true,
     title: "Cái Tiệm Sữa",
@@ -33,7 +40,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   minimumScale: 1,
   userScalable: false,
-  themeColor: "#fcfbf8",
+  themeColor: "#f5faff",
   colorScheme: "light",
   viewportFit: "cover",
   width: "device-width",
@@ -52,7 +59,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body
-        className="m-0 min-h-dvh bg-paper font-sans text-sm text-ink antialiased selection:bg-[#cce3e9] [&_:is(button,a,input,textarea)]:focus-visible:outline-3 [&_:is(button,a,input,textarea)]:focus-visible:outline-[#64aabc] [&_:is(button,a,input,textarea)]:focus-visible:outline-offset-4 [&_main]:overflow-clip mobile:text-[15px] mobile:before:fixed mobile:before:inset-x-0 mobile:before:top-0 mobile:before:z-21 mobile:before:h-[env(safe-area-inset-top,0px)] mobile:before:bg-paper mobile:before:content-[''] mobile:before:pointer-events-none mobile:[&_main]:pr-[env(safe-area-inset-right,0px)] mobile:[&_main]:pl-[env(safe-area-inset-left,0px)] touch:[&_input:not([type=checkbox]):not([type=radio])]:text-[max(16px,1em)] touch:[&_textarea]:text-[max(16px,1em)] touch:[&_select]:text-[max(16px,1em)] motion-reduce:[&_*]:animate-none! motion-reduce:[&_*]:transition-none! motion-reduce:[&_*::before]:animate-none! motion-reduce:[&_*::before]:transition-none! motion-reduce:[&_*::after]:animate-none! motion-reduce:[&_*::after]:transition-none!"
+        className="m-0 min-h-dvh bg-paper font-sans text-sm text-ink antialiased selection:bg-ice [&_:is(button,a,input,textarea)]:focus-visible:outline-3 [&_:is(button,a,input,textarea)]:focus-visible:outline-sky [&_:is(button,a,input,textarea)]:focus-visible:outline-offset-4 [&_main]:overflow-clip mobile:text-[15px] mobile:before:fixed mobile:before:inset-x-0 mobile:before:top-0 mobile:before:z-21 mobile:before:h-[env(safe-area-inset-top,0px)] mobile:before:bg-paper mobile:before:content-[''] mobile:before:pointer-events-none mobile:[&_main]:pr-[env(safe-area-inset-right,0px)] mobile:[&_main]:pl-[env(safe-area-inset-left,0px)] touch:[&_input:not([type=checkbox]):not([type=radio])]:text-[max(16px,1em)] touch:[&_textarea]:text-[max(16px,1em)] touch:[&_select]:text-[max(16px,1em)] motion-reduce:[&_*]:animate-none! motion-reduce:[&_*]:transition-none! motion-reduce:[&_*::before]:animate-none! motion-reduce:[&_*::before]:transition-none! motion-reduce:[&_*::after]:animate-none! motion-reduce:[&_*::after]:transition-none!"
         suppressHydrationWarning
       >
         {children}

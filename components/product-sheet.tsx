@@ -91,12 +91,6 @@ export function ProductSheet({
           />
           <div className={styles.details}>
             <div className={styles.priceRow}>
-              <span
-                className={`flex w-fit items-center gap-1.5 text-[11px] text-green [&_i]:size-1 [&_i]:rounded-full [&_i]:bg-current ${available ? "" : "text-red!"}`}
-              >
-                <i />
-                {available ? "Còn hàng" : "Hết hàng"}
-              </span>
               <div className={styles.priceLine}>
                 <strong className={styles.price}>{money(basePrice)}</strong>
                 <span className={styles.unit}>/ {product.unit}</span>
@@ -116,7 +110,7 @@ export function ProductSheet({
                   <input type="radio" name={`size-${product.id}`} value={s.id}
                     checked={sizeId === s.id} disabled={!s.available}
                     onChange={() => setSizeId(s.id)} className="size-4 accent-blue" />
-                  <span>{s.name}{!s.available && " · Hết hàng"}</span>
+                  <span>{s.name}</span>
                   <b>{money(s.price)}</b>
                 </label>
               ))}
@@ -151,7 +145,7 @@ export function ProductSheet({
                       )
                     }
                   />
-                  <span>{t.name}{!t.available && <small> · Hết</small>}</span>
+                  <span>{t.name}</span>
                   {t.price > 0 && <b>+{money(t.price)}</b>}
                 </label>
               ))}

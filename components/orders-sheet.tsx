@@ -24,12 +24,10 @@ export function OrdersSheet({
   settings,
   initialOrder,
   onClose,
-  onRefreshCatalog,
 }: {
   settings: ShopSettings;
   initialOrder?: ShopOrder;
   onClose: () => void;
-  onRefreshCatalog: () => void;
 }) {
   const { dialogRef, dismiss } = useModalMotion(onClose);
   const [orders, setOrders] = useState<ShopOrder[]>(
@@ -146,7 +144,6 @@ export function OrdersSheet({
           body: file,
         });
         await refresh();
-        onRefreshCatalog();
       } catch (err) {
         setError(
           err instanceof Error
@@ -185,7 +182,7 @@ export function OrdersSheet({
               Đã chuyển khoản? Gửi ảnh bill (JPG, PNG, WebP · tối đa 3 MB).
             </p>
             <label
-              className={`relative inline-flex h-10 min-h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-lg bg-blue px-4 text-[13px] font-semibold text-white transition-colors hover:bg-blue-dark focus-within:outline-2 focus-within:outline-blue/50 focus-within:outline-offset-2 [&_input]:absolute [&_input]:inset-0 [&_input]:size-full [&_input]:cursor-pointer [&_input]:opacity-0 ${isUploading ? "cursor-not-allowed opacity-55" : "cursor-pointer"}`}
+              className={`relative inline-flex h-10 min-h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-button bg-blue px-4 text-[13px] font-semibold text-white transition-colors hover:bg-blue-dark focus-within:outline-2 focus-within:outline-blue/50 focus-within:outline-offset-2 [&_input]:absolute [&_input]:inset-0 [&_input]:size-full [&_input]:cursor-pointer [&_input]:opacity-0 ${isUploading ? "cursor-not-allowed opacity-55" : "cursor-pointer"}`}
             >
               <Upload size={18} />
               {isUploading ? "Đang gửi bill…" : "Tôi đã chuyển khoản · Gửi bill"}
@@ -233,7 +230,7 @@ export function OrdersSheet({
                     <li key={order.id}>
                       <button
                         type="button"
-                        className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-line/70 bg-white p-4 text-left transition-colors hover:border-blue/35 hover:bg-blue-light/40 active:bg-blue-light"
+                        className="rounded-button flex w-full cursor-pointer items-center gap-3 border border-line/70 bg-white p-4 text-left transition-colors hover:border-blue/35 hover:bg-blue-light/40 active:bg-blue-light"
                         onClick={() => {
                           setActiveId(order.id);
                           setDetailReadyId("");
@@ -306,7 +303,7 @@ export function OrdersSheet({
           >
             {error}
             <button
-              className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 rounded-lg font-medium text-xs border border-line bg-white hover:bg-blue-light"
+              className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 font-medium text-xs border border-line bg-white hover:bg-blue-light"
               onClick={() => void refresh()}
             >
               Tải lại đơn

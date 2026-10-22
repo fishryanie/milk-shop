@@ -55,13 +55,13 @@ function OrderPayment({ order, settings, copied, onCopy }: Omit<OrderDetailsProp
           <div className="grid grid-cols-[minmax(0,1fr)_160px] items-start gap-4 mobile:grid-cols-[minmax(0,1fr)_128px] mobile:gap-3">
             <div className="space-y-3">
               <p className="text-[13px] leading-6 text-muted">{order.payment?.note || settings.paymentNote}</p>
-              <button type="button" onClick={onCopy} className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-lg border border-line/70 bg-white px-3 py-2.5 text-left transition-colors hover:border-blue/35 hover:bg-blue-light/40">
+              <button type="button" onClick={onCopy} className="rounded-button flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 border border-line/70 bg-white px-3 py-2.5 text-left transition-colors hover:border-blue/35 hover:bg-blue-light/40">
                 <span className="min-w-0"><span className="block text-xs text-muted">{copied ? "Đã sao chép nội dung" : "Nội dung chuyển khoản"}</span><span className="mt-1 block break-all text-[13px] font-medium">{order.code}</span></span>
                 {copied ? <Check size={17} className="shrink-0 text-blue" /> : <Copy size={17} className="shrink-0 text-blue" />}
               </button>
               <p className="flex items-start gap-2 text-xs leading-5 text-muted"><Clock3 size={15} className="mt-0.5 shrink-0" />Gửi bill trước {formatClock(order.expiresAt)} để tiệm giữ món cho bạn.</p>
             </div>
-            {qrImage && <a href={qrImage} download="qr-tiem-sua.png" className="block rounded-lg border border-line/70 bg-white p-2 text-center">
+            {qrImage && <a href={qrImage} download="qr-tiem-sua.png" className="block rounded-button border border-line/70 bg-white p-2 text-center">
               <img src={qrImage} alt="Mã QR chuyển khoản do tiệm cung cấp" className="aspect-square w-full object-contain" />
               <span className="mt-2 block text-xs text-muted">Chạm để lưu QR</span>
             </a>}

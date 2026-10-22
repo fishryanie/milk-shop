@@ -61,7 +61,7 @@ export function ProductImage({
     )
   ) : (
     <div
-      className={`${className} flex flex-col items-center justify-center gap-2 bg-linear-to-br from-[#faf7f0] to-[#edf4f3] text-[#768e91]`}
+      className={`${className} flex flex-col items-center justify-center gap-2 bg-linear-to-br from-paper to-blue-light text-muted`}
     >
       <div className="flex size-11 items-center justify-center rounded-2xl bg-white shadow-xs text-blue">
         <Milk size={22} strokeWidth={1.5} />

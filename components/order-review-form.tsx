@@ -6,7 +6,7 @@ import { money, paymentMethodLabels, type Customer, type PaymentMethod, type Quo
 export type CheckoutReview = { quote: Quote; customer: Customer; paymentMethod: PaymentMethod };
 
 const distanceFormatter = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 });
-const editClass = "min-h-9 shrink-0 cursor-pointer rounded-md px-2 text-xs font-medium text-blue transition-colors hover:bg-blue-light disabled:cursor-not-allowed disabled:opacity-45";
+const editClass = "min-h-9 shrink-0 cursor-pointer rounded-button px-2 text-xs font-medium text-blue transition-colors hover:bg-blue-light disabled:cursor-not-allowed disabled:opacity-45";
 
 export function OrderReviewForm({ formId, review, introRef, pickupAddress, busy, action, onEditCustomer, onEditLocation, onEditPayment, onEditCart }: {
   formId: string;

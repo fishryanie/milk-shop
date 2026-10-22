@@ -23,7 +23,7 @@
   height: auto;
   aspect-ratio: 1;
   border-radius: 10px;
-  background: #f3f0e9;
+  background: var(--color-blue-light);
   object-fit: contain;
 }
 
@@ -101,7 +101,7 @@
   gap: 6px;
   padding: 8px;
   border: 1px solid var(--color-line);
-  border-radius: 8px;
+  border-radius: var(--radius-button);
   font-size: 12px;
   line-height: 1.4;
   cursor: pointer;

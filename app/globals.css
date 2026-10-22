@@ -6,16 +6,22 @@
 }
 
 @theme {
-  --color-paper: #fcfbf8;
+  /* Royal blue and ice blue sampled from the printed menu. */
+  --color-paper: #f5faff;
   --color-paper-light: #ffffff;
-  --color-ink: #203d45;
-  --color-muted: #708086;
-  --color-blue: #287f96;
-  --color-blue-dark: #21677b;
-  --color-blue-light: #eaf3f5;
-  --color-line: #dde6e6;
+  --color-ink: #153454;
+  --color-muted: #58718b;
+  --color-blue: #0862c0;
+  --color-blue-dark: #014ba6;
+  --color-blue-bright: #087bc4;
+  --color-blue-light: #e8f3ff;
+  --color-sky: #3892df;
+  --color-ice: #bfdefb;
+  --color-line: #d2e3f4;
   --color-green: #4c775a;
   --color-red: #ad4d3d;
+
+  --radius-button: 8px;
 
   --animate-slide-in: slide-in 0.25s ease-out;
   --animate-fade-in: fade-in 0.25s ease-out;
@@ -44,6 +50,16 @@
       opacity: 0.45;
     }
   }
+}
+
+:root {
+  /* Keep white button labels readable across the entire gradient. */
+  --brand-gradient: linear-gradient(135deg, var(--color-blue-dark) 0%, var(--color-blue) 55%, var(--color-blue-bright) 100%);
+}
+
+@utility bg-brand {
+  background-color: var(--color-blue);
+  background-image: var(--brand-gradient);
 }
 
 /* Preserve the storefront's portrait, landscape and virtual-keyboard breakpoints. */
@@ -134,10 +150,10 @@
   height: 44px;
   border: 2px solid #fff;
   border-radius: 50%;
-  background: var(--color-blue);
+  background: var(--brand-gradient);
   color: white;
   font: 600 14px var(--font-sans);
-  box-shadow: 0 8px 24px #287f9638;
+  box-shadow: 0 8px 24px #014ba638;
   pointer-events: none;
   z-index: 101;
 }
@@ -179,6 +195,10 @@
   to { opacity: 1; transform: translateY(0); }
 }
 @media (max-width: 760px), (max-width: 980px) and (max-height: 500px) {
+  :root {
+    --radius-button: 12px;
+  }
+
   .shop-modal {
     --modal-enter-from: translateY(calc(100% + 24px));
     --modal-exit-to: translateY(calc(100% + 24px));

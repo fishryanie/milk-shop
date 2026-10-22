@@ -6,10 +6,12 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "vi",
     start_url: "/",
     display: "standalone",
-    theme_color: "#fcfbf8",
-    background_color: "#fcfbf8",
+    theme_color: "#f5faff",
+    background_color: "#f5faff",
     icons: [
-      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

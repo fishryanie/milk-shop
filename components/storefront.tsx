@@ -118,7 +118,7 @@ export function Storefront({
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
-  const refreshCatalog = useCallback(async () => {
+  const loadCatalog = useCallback(async () => {
     try {
       const data = await api<Catalog>("/api/catalog");
       setCatalog(data);
@@ -130,7 +130,7 @@ export function Storefront({
     }
   }, []);
   useEffect(() => {
-    void refreshCatalog();
+    void loadCatalog();
     const saved = readSaved<CartLine[]>("milk-cart", []);
     if (Array.isArray(saved))
       setCart(
@@ -151,19 +151,10 @@ export function Storefront({
           .slice(0, 30),
       );
     setHydrated(true);
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") void refreshCatalog();
-    }, 45000);
-    const focus = () => {
-      if (document.visibilityState === "visible") void refreshCatalog();
-    };
-    document.addEventListener("visibilitychange", focus);
     return () => {
-      clearInterval(interval);
       clearTimeout(toastTimer.current);
-      document.removeEventListener("visibilitychange", focus);
     };
-  }, [refreshCatalog]);
+  }, [loadCatalog]);
   useEffect(() => {
     if (modal === "orders" || modal === "checkout") return;
     let cancelled = false;
@@ -224,16 +215,7 @@ export function Storefront({
   useEffect(() => {
     if (modal !== "cart" && modal !== "checkout") return;
     void refreshQuote();
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") void refreshQuote();
-    }, 15000);
-    const focus = () => {
-      if (document.visibilityState === "visible") void refreshQuote();
-    };
-    document.addEventListener("visibilitychange", focus);
     return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", focus);
       quoteSeq.current++;
     };
   }, [modal, refreshQuote]);
@@ -333,7 +315,7 @@ export function Storefront({
     hydrated && !loading && !error && !modal && !selected && !tourSeen;
   return (
     <>
-      <div className="flex h-8 items-center justify-between bg-[#deedf0] px-[max(5.5vw,24px)] text-[10px] tracking-[.5px] text-[#3d6b77] [&>span:last-child]:flex [&>span:last-child]:items-center [&>span:last-child]:gap-[7px] mobile:h-[calc(27px+env(safe-area-inset-top,0px))] mobile:justify-center mobile:pt-[env(safe-area-inset-top,0px)] mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:tracking-[.1px] mobile:[&>span:last-child]:hidden">
+      <div className="flex h-8 items-center justify-between bg-blue-light px-[max(5.5vw,24px)] text-[10px] tracking-[.5px] text-blue-dark [&>span:last-child]:flex [&>span:last-child]:items-center [&>span:last-child]:gap-[7px] mobile:h-[calc(27px+env(safe-area-inset-top,0px))] mobile:justify-center mobile:pt-[env(safe-area-inset-top,0px)] mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:tracking-[.1px] mobile:[&>span:last-child]:hidden">
         <span>Đặt hàng ngay, giao đến tận tay.</span>
         <span>
           <Heart size={12} /> Từ căn bếp nhỏ của tiệm
@@ -346,7 +328,7 @@ export function Storefront({
             className="flex shrink-0 items-center"
             aria-label={`${settings.name} — Trang chủ`}
           >
-            <span className="relative grid size-[43px] place-items-center rounded-full border border-[#9ebec5] text-blue hover:border-blue transition-colors [&_i]:absolute [&_i]:top-[7px] [&_i]:right-[5px] [&_i]:size-[5px] [&_i]:rounded-full [&_i]:bg-blue mobile:size-[38px] mobile:shrink-0 tiny:size-[34px]">
+            <span className="relative grid size-[43px] place-items-center rounded-full border border-blue/30 text-blue hover:border-blue transition-colors [&_i]:absolute [&_i]:top-[7px] [&_i]:right-[5px] [&_i]:size-[5px] [&_i]:rounded-full [&_i]:bg-blue mobile:size-[38px] mobile:shrink-0 tiny:size-[34px]">
               <Droplet size={28} strokeWidth={1.35} />
               <i />
             </span>
@@ -387,7 +369,7 @@ export function Storefront({
             Liên hệ & Bản đồ
           </a>
           <button
-            className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-ink rounded-lg"
+            className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-ink"
             onClick={() => {
               setNewOrder(undefined);
               setModal("orders");
@@ -396,14 +378,14 @@ export function Storefront({
             Đơn của tôi <ArrowUpRight size={15} />
           </button>
           <button
-            className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px inline-flex h-10 min-h-10 items-center px-2.5 text-muted tablet:hidden!"
+            className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px inline-flex h-10 min-h-10 items-center px-2.5 text-muted tablet:hidden!"
             onClick={() => setModal("tour")}
           >
             Ghé tiệm lần đầu?
           </button>
         </nav>
         <button
-          className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative flex h-10 min-h-10 items-center gap-2.5 rounded-lg border border-[#bdcfd3] px-3 text-xs font-semibold hover:border-blue/50 [&_b]:grid [&_b]:h-5 [&_b]:min-w-5 [&_b]:place-items-center [&_b]:rounded-full [&_b]:bg-blue [&_b]:text-[10px] [&_b]:text-white enabled:active:scale-[.96] enabled:active:translate-y-px enabled:active:border-blue enabled:active:bg-blue-light mobile:min-w-[52px] mobile:shrink-0 mobile:gap-1.5 mobile:px-2.5 mobile:[&>span]:hidden mobile:[&_b]:text-[11px]"
+          className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative flex h-10 min-h-10 items-center gap-2.5 border border-blue/25 px-3 text-xs font-semibold hover:border-blue/50 [&_b]:grid [&_b]:h-5 [&_b]:min-w-5 [&_b]:place-items-center [&_b]:rounded-full [&_b]:bg-blue [&_b]:text-[10px] [&_b]:text-white enabled:active:scale-[.96] enabled:active:translate-y-px enabled:active:border-blue enabled:active:bg-blue-light mobile:min-w-[52px] mobile:shrink-0 mobile:gap-1.5 mobile:px-2.5 mobile:[&>span]:hidden mobile:[&_b]:text-[11px]"
           onClick={() => setModal("cart")}
           data-cart-target
           aria-label={`Mở giỏ hàng, ${count} món`}
@@ -421,7 +403,7 @@ export function Storefront({
         >
           <div className="pt-1.5 pb-4 [&>p]:mt-6 [&>p]:mb-[26px] [&>p]:max-w-[360px] [&>p]:text-xs [&>p]:leading-[1.95] [&>p]:text-muted mobile:min-w-0 mobile:p-0 mobile:[&>p]:hidden">
             <div
-              className={`${introStyles.status} mb-[25px] flex items-center gap-2 text-[10px] tracking-[.25px] text-[#5d7376] mobile:mb-3 mobile:gap-[7px] mobile:text-[11px] mobile:[&>span:last-child]:hidden`}
+              className={`${introStyles.status} mb-[25px] flex items-center gap-2 text-[10px] tracking-[.25px] text-muted mobile:mb-3 mobile:gap-[7px] mobile:text-[11px] mobile:[&>span:last-child]:hidden`}
             >
               <span
                 className={`size-1.5 rounded-full bg-[#639775] shadow-[0_0_0_3px_#63977512] ${settings.isOpen ? "" : "bg-[#ad795c]!"}`}
@@ -429,7 +411,7 @@ export function Storefront({
               <span>
                 {settings.isOpen ? "Tiệm đang nhận đơn" : "Tiệm đang tạm nghỉ"}
               </span>
-              <span className="mx-1.5 h-2.5 w-px bg-[#becfd1] mobile:hidden" />
+              <span className="mx-1.5 h-2.5 w-px bg-line mobile:hidden" />
               <span>Nhà làm, mỗi ngày</span>
             </div>
             <h1>
@@ -440,7 +422,7 @@ export function Storefront({
 
             <p>{settings.description}</p>
             <a
-              className={`${introStyles.cta} relative inline-flex h-10 min-h-10 items-center justify-center gap-2 overflow-hidden rounded-lg px-4 text-[13px] font-semibold select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 active:translate-y-px active:scale-[.96] mobile:[&>svg]:shrink-0 bg-blue text-white hover:-translate-y-px hover:bg-blue-dark active:translate-y-[1.5px] active:bg-blue-dark active:brightness-[.94] active:shadow-[inset_0_1px_4px_#203d4559] gap-3 px-[18px] mobile:mt-[18px] mobile:gap-2 mobile:px-3.5 mobile:[&_svg]:w-4 mobile:[&_svg]:shrink-0 tiny:px-2.5 tiny:text-[11px]`}
+              className={`${introStyles.cta} relative inline-flex h-10 min-h-10 items-center justify-center gap-2 overflow-hidden rounded-button px-4 text-[13px] font-semibold select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 active:translate-y-px active:scale-[.96] mobile:[&>svg]:shrink-0 bg-brand text-white hover:-translate-y-px hover:brightness-95 active:translate-y-[1.5px] active:brightness-[.94] active:shadow-[inset_0_1px_4px_#014ba659] gap-3 px-[18px] mobile:mt-[18px] mobile:gap-2 mobile:px-3.5 mobile:[&_svg]:w-4 mobile:[&_svg]:shrink-0 tiny:px-2.5 tiny:text-[11px]`}
               href="#menu"
               onClick={(e) => {
                 const target = document.getElementById("menu");
@@ -475,8 +457,8 @@ export function Storefront({
             >
               Chọn món ngay <ArrowDown size={17} />
             </a>
-            <div className="mt-7 flex items-center gap-2.5 text-[9px] leading-[1.9] text-[#71838a] [&_b]:font-normal [&_b]:text-[#4c626a] mobile:hidden">
-              <span className="grid size-[31px] place-items-center rounded-full bg-[#f4ede5] text-[#a57753]">
+            <div className="mt-7 flex items-center gap-2.5 text-[9px] leading-[1.9] text-muted [&_b]:font-normal [&_b]:text-ink mobile:hidden">
+              <span className="grid size-[31px] place-items-center rounded-full bg-blue-light text-blue">
                 <Heart size={18} strokeWidth={1.4} />
               </span>
               <span>
@@ -505,7 +487,7 @@ export function Storefront({
               decoding="async"
               fetchPriority="high"
             />
-            <div className="absolute right-[-5px] bottom-[41px] flex h-[140px] w-[122px] rotate-[7deg] flex-col justify-between bg-[#f4e8cf] px-[13px] py-[18px] text-[#766447] shadow-[0_5px_16px_#604a1c0c] [&_span]:text-[8px] [&_span]:tracking-[2px] [&_span]:uppercase [&_b]:font-serif [&_b]:text-[22px] [&_b]:leading-[1.15] [&_b]:font-normal [&_svg]:self-end tablet:right-[-7px] tablet:h-[125px] tablet:w-[105px] tablet:[&_b]:text-[19px] mobile:hidden">
+            <div className="absolute right-[-5px] bottom-[41px] flex h-[140px] w-[122px] rotate-[7deg] flex-col justify-between bg-ice px-[13px] py-[18px] text-blue-dark shadow-[0_5px_16px_#014ba614] [&_span]:text-[8px] [&_span]:tracking-[2px] [&_span]:uppercase [&_b]:font-serif [&_b]:text-[22px] [&_b]:leading-[1.15] [&_b]:font-normal [&_svg]:self-end tablet:right-[-7px] tablet:h-[125px] tablet:w-[105px] tablet:[&_b]:text-[19px] mobile:hidden">
               <span>tươi ngon</span>
               <b>
                 từ những điều
@@ -515,7 +497,7 @@ export function Storefront({
               <Heart size={17} />
             </div>
             <div
-              className={`${introStyles.caption} mt-4 flex items-center justify-center gap-2.5 text-[8px] tracking-[1.2px] text-[#71868b] [&_i]:block [&_i]:h-px [&_i]:w-[27px] [&_i]:bg-[#a7bec4] mobile:mt-2.5 mobile:gap-1.5 mobile:text-[9px] mobile:tracking-[.2px] mobile:[&>span]:hidden mobile:[&_i]:w-[18px]`}
+              className={`${introStyles.caption} mt-4 flex items-center justify-center gap-2.5 text-[8px] tracking-[1.2px] text-muted [&_i]:block [&_i]:h-px [&_i]:w-[27px] [&_i]:bg-blue/30 mobile:mt-2.5 mobile:gap-1.5 mobile:text-[9px] mobile:tracking-[.2px] mobile:[&>span]:hidden mobile:[&_i]:w-[18px]`}
             >
               <span>MADE WITH A LITTLE LOVE</span>
               <i />
@@ -523,7 +505,7 @@ export function Storefront({
             </div>
           </div>
         </section>
-        <div className="flex justify-around gap-6 border-y border-line bg-[#f2f7f6] px-[8vw] py-[21px] text-[#607b80] [&>span]:flex [&>span]:items-center [&>span]:gap-2.5 [&>span]:text-[10px] [&_svg]:text-blue mobile:justify-between mobile:gap-3 mobile:px-3 mobile:py-3.5 mobile:[&>span]:gap-1.5 mobile:[&>span]:leading-[1.4] mobile:[&>span:last-child]:hidden mobile:[&_svg]:w-[17px] mobile:[&_svg]:shrink-0 tiny:[&>span]:gap-1 tiny:[&>span]:text-[9px] tiny:[&_svg]:w-[15px]">
+        <div className="flex justify-around gap-6 border-y border-line bg-blue-light/60 px-[8vw] py-[21px] text-muted [&>span]:flex [&>span]:items-center [&>span]:gap-2.5 [&>span]:text-[10px] [&_svg]:text-blue mobile:justify-between mobile:gap-3 mobile:px-3 mobile:py-3.5 mobile:[&>span]:gap-1.5 mobile:[&>span]:leading-[1.4] mobile:[&>span:last-child]:hidden mobile:[&_svg]:w-[17px] mobile:[&_svg]:shrink-0 tiny:[&>span]:gap-1 tiny:[&>span]:text-[9px] tiny:[&_svg]:w-[15px]">
           <span>
             <Milk size={20} strokeWidth={1.35} />
             Ít ngọt, béo thơm
@@ -555,7 +537,7 @@ export function Storefront({
               </h2>
               <p>Một món quen, hay một chút mới cho hôm nay?</p>
             </div>
-            <span className="rotate-[-7deg] pr-1.5 font-serif text-xl text-[#8f9a87] italic tablet:text-lg mobile:hidden">
+            <span className="rotate-[-7deg] pr-1.5 font-serif text-xl text-blue/70 italic tablet:text-lg mobile:hidden">
               ngon hơn khi có bạn ♡
             </span>
           </div>
@@ -566,8 +548,8 @@ export function Storefront({
             >
               <span>{error}</span>
               <button
-                className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 rounded-lg font-medium text-xs border border-line bg-white hover:bg-blue-light"
-                onClick={() => void refreshCatalog()}
+                className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 font-medium text-xs border border-line bg-white hover:bg-blue-light"
+                onClick={() => void loadCatalog()}
               >
                 Thử lại
               </button>
@@ -580,27 +562,26 @@ export function Storefront({
             >
               {[1, 2, 3, 4, 5, 6].map((n) => (
                 <div
-                  className="animate-skeleton min-w-0 flex flex-col justify-between rounded-xl sm:rounded-3xl border border-[#e6eded] bg-white p-2.5 sm:p-4 shadow-xs"
+                  className="animate-skeleton min-w-0 flex flex-col justify-between rounded-xl sm:rounded-3xl border border-line bg-white p-2.5 sm:p-4 shadow-xs"
                   key={n}
                 >
                   <div>
-                    <div className="aspect-[1.16] w-full rounded-lg sm:rounded-2xl bg-[#e6edeb]" />
+                    <div className="aspect-[1.16] w-full rounded-lg sm:rounded-2xl bg-line/70" />
                     <div className="mt-2.5 sm:mt-3.5 flex items-center justify-between">
-                      <span className="h-3 w-12 sm:w-16 rounded bg-[#e6edeb]" />
-                      <span className="h-3 w-10 sm:w-14 rounded-full bg-[#e6edeb]" />
+                      <span className="h-3 w-12 sm:w-16 rounded bg-line/70" />
                     </div>
-                    <span className="mt-2 block h-4 sm:h-5 w-3/4 rounded bg-[#e6edeb]" />
-                    <span className="mt-1.5 block h-3 sm:h-3.5 w-full rounded bg-[#e6edeb]" />
+                    <span className="mt-2 block h-4 sm:h-5 w-3/4 rounded bg-line/70" />
+                    <span className="mt-1.5 block h-3 sm:h-3.5 w-full rounded bg-line/70" />
                   </div>
-                  <div className="mt-2.5 sm:mt-4 flex items-center justify-between border-t border-[#f0f4f4] pt-2 sm:pt-3">
-                    <span className="h-4 sm:h-5 w-14 sm:w-20 rounded bg-[#e6edeb]" />
-                    <span className="size-8 sm:size-9 rounded-full bg-[#e6edeb]" />
+                  <div className="mt-2.5 sm:mt-4 flex items-center justify-between border-t border-line/60 pt-2 sm:pt-3">
+                    <span className="h-4 sm:h-5 w-14 sm:w-20 rounded bg-line/70" />
+                    <span className="size-8 sm:size-9 rounded-full bg-line/70" />
                   </div>
                 </div>
               ))}
             </div>
           ) : !products.length ? (
-            <div className="flex min-h-[280px] flex-col items-center justify-center gap-[17px] px-5 py-10 text-center [&_svg]:text-[#8aa5ab] [&_h3]:font-serif [&_h3]:text-[27px] [&_p]:max-w-[350px] [&_p]:text-xs [&_p]:leading-[1.8] [&_p]:text-muted mobile:min-h-[260px] mobile:gap-4 mobile:py-[30px] mobile:[&_h3]:leading-[1.3] mobile:[&_p]:text-sm">
+            <div className="flex min-h-[280px] flex-col items-center justify-center gap-[17px] px-5 py-10 text-center [&_svg]:text-sky [&_h3]:font-serif [&_h3]:text-[27px] [&_p]:max-w-[350px] [&_p]:text-xs [&_p]:leading-[1.8] [&_p]:text-muted mobile:min-h-[260px] mobile:gap-4 mobile:py-[30px] mobile:[&_h3]:leading-[1.3] mobile:[&_p]:text-sm">
               <Milk size={44} strokeWidth={1} />
               <h3>Tiệm đang chuẩn bị menu mới</h3>
               <p>Bạn ghé lại tiệm một chút nữa nhé.</p>
@@ -620,14 +601,14 @@ export function Storefront({
                 return (
                   <article
                     key={p.id}
-                    className="group relative min-w-0 flex flex-col justify-between rounded-xl sm:rounded-2xl border border-[#e8eeee] bg-white p-2.5 sm:p-4 shadow-[0_2px_10px_rgba(32,61,69,0.03)] transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:border-[#287f96]/35 hover:shadow-[0_10px_24px_rgba(40,127,150,0.1)] select-none outline-none [-webkit-tap-highlight-color:transparent]"
+                    className="group relative min-w-0 flex flex-col justify-between rounded-xl sm:rounded-2xl border border-line bg-white p-2.5 sm:p-4 shadow-[0_2px_10px_rgba(21,52,84,0.03)] transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:border-blue/35 hover:shadow-[0_10px_24px_rgba(1,75,166,0.1)] select-none outline-none [-webkit-tap-highlight-color:transparent]"
                   >
                     {/* Ảnh sản phẩm & Badge */}
                     <button
                       type="button"
                       onClick={() => setSelected(p)}
                       aria-label={`Xem món ${p.name}`}
-                      className="relative aspect-square w-full overflow-hidden rounded-lg sm:rounded-xl bg-[#f4f7f6] block text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer touch-manipulation"
+                      className="rounded-button relative aspect-square w-full overflow-hidden bg-blue-light/50 block text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer touch-manipulation"
                     >
                       <ProductImage
                         product={p}
@@ -649,15 +630,6 @@ export function Storefront({
                         </span>
                       )}
 
-                      {/* Lớp phủ khi hết hàng */}
-                      {!available && (
-                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/85 p-2 text-center backdrop-blur-[2px]">
-                          <span className="rounded-full bg-paper px-2.5 py-1 sm:px-3.5 sm:py-1.5 font-serif text-[11px] sm:text-sm font-medium text-ink shadow-sm border border-line">
-                            Hẹn mẻ sau nhé
-                          </span>
-                        </div>
-                      )}
-
                       {/* Số lượng đã có trong giỏ hàng */}
                       {inCart > 0 && (
                         <span className="absolute right-1.5 bottom-1.5 sm:right-2.5 sm:bottom-2.5 z-10 flex items-center gap-1 rounded-full bg-blue px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[11px] font-semibold text-white shadow-md backdrop-blur-xs animate-fade-in">
@@ -671,24 +643,10 @@ export function Storefront({
                     {/* Thông tin sản phẩm */}
                     <div className="flex flex-1 flex-col justify-between pt-2 sm:pt-3 min-w-0">
                       <div className="min-w-0">
-                        {/* Thanh thể loại & Trạng thái còn hàng */}
+                        {/* Thể loại */}
                         <div className="flex items-center justify-between gap-1 text-[9.5px] sm:text-[11px]">
-                          <span className="truncate max-w-[65px] sm:max-w-none rounded bg-[#f0f5f5] px-1.5 py-0.5 font-medium uppercase tracking-wider text-muted text-[8.5px] sm:text-[10px]">
+                          <span className="truncate max-w-[65px] sm:max-w-none rounded bg-blue-light px-1.5 py-0.5 font-medium uppercase tracking-wider text-muted text-[8.5px] sm:text-[10px]">
                             {p.category}
-                          </span>
-                          <span
-                            className={`shrink-0 flex items-center gap-1 font-medium ${
-                              available ? "text-green" : "text-[#9a8275]"
-                            }`}
-                          >
-                            <span
-                              className={`size-1.5 rounded-full ${
-                                available
-                                  ? "bg-green animate-pulse"
-                                  : "bg-[#9a8275]"
-                              }`}
-                            />
-                            <span>{available ? "Còn hàng" : "Tạm hết"}</span>
                           </span>
                         </div>
 
@@ -696,7 +654,7 @@ export function Storefront({
                         <button
                           type="button"
                           onClick={() => setSelected(p)}
-                          className="mt-1.5 block w-full text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer"
+                          className="rounded-button mt-1.5 block w-full text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer"
                         >
                           <h3 className="font-serif text-[15px] sm:text-[20px] font-normal leading-[1.25] sm:leading-[1.3] text-ink transition-colors duration-200 group-hover:text-blue line-clamp-1 break-words">
                             {p.name}
@@ -710,7 +668,7 @@ export function Storefront({
 
                         {/* Tag gợi ý tùy chọn size / topping */}
                         {/* {hasOptions && (
-                          <div className="mt-1.5 flex items-center gap-1 rounded-md bg-[#eaf3f5] px-1.5 py-0.5 text-[9px] sm:text-[11px] font-medium text-blue w-fit max-w-full">
+                          <div className="mt-1.5 flex items-center gap-1 rounded-md bg-blue-light px-1.5 py-0.5 text-[9px] sm:text-[11px] font-medium text-blue w-fit max-w-full">
                             <Sparkles
                               size={10}
                               className="shrink-0 text-blue"
@@ -729,7 +687,7 @@ export function Storefront({
                       </div>
 
                       {/* Chân card: Giá & Nút chọn món */}
-                      <div className="mt-2.5 sm:mt-3.5 flex items-center justify-between gap-1.5 border-t border-[#f0f4f4] pt-2 sm:pt-2.5">
+                      <div className="mt-2.5 sm:mt-3.5 flex items-center justify-between gap-1.5 border-t border-line/60 pt-2 sm:pt-2.5">
                         <div className="min-w-0 flex-1">
                           {p.sizes?.length ? (
                             <span className="block text-[8.5px] sm:text-[11px] text-muted leading-tight">
@@ -755,7 +713,7 @@ export function Storefront({
                             setSelected(p);
                           }}
                           aria-label={`Chọn ${p.name}`}
-                          className="flex size-8 md:h-9 md:w-auto md:px-3 items-center justify-center gap-1 rounded-full bg-blue text-white md:bg-[#eaf3f5] md:text-blue shadow-xs transition-all duration-200 md:group-hover:bg-blue md:group-hover:text-white group-hover:shadow-sm active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 shrink-0 cursor-pointer"
+                          className="rounded-button flex size-8 md:h-9 md:w-auto md:px-3 items-center justify-center gap-1 bg-brand text-white shadow-xs transition-[transform,box-shadow,filter] duration-200 enabled:hover:brightness-95 group-hover:shadow-sm active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 shrink-0 cursor-pointer"
                         >
                           <ShoppingCartPlus size={13} strokeWidth={2.5} />
                           <span className="hidden md:inline text-xs font-semibold">
@@ -808,7 +766,7 @@ export function Storefront({
                 </a>
 
                 {/* Map nhỏ dưới chữ mở trên google map */}
-                <div className="relative mt-2 w-full max-w-[340px] h-[145px] overflow-hidden rounded-xl border border-line bg-[#eaf0f2] shadow-[0_2px_8px_#203d450a] transition-all hover:border-blue/50 hover:shadow-md">
+                <div className="relative mt-2 w-full max-w-[340px] h-[145px] overflow-hidden rounded-xl border border-line bg-blue-light shadow-[0_2px_8px_#1534540a] transition-all hover:border-blue/50 hover:shadow-md">
                   <iframe
                     src={embedUrl}
                     width="100%"
@@ -832,7 +790,7 @@ export function Storefront({
             {settings.phone ? (
               <a
                 href={`tel:${settings.phone}`}
-                className="inline-flex items-center gap-2 rounded-lg border border-line bg-paper-light px-3.5 py-2 text-xs font-medium text-ink hover:border-blue/40 hover:text-blue hover:shadow-xs transition-all active:scale-[0.98]"
+                className="inline-flex items-center gap-2 rounded-button border border-line bg-paper-light px-3.5 py-2 text-xs font-medium text-ink hover:border-blue/40 hover:text-blue hover:shadow-xs transition-all active:scale-[0.98]"
               >
                 <Phone size={14} className="text-blue" />
                 <span>
@@ -842,7 +800,7 @@ export function Storefront({
             ) : null}
 
             {settings.deliveryNote && (
-              <div className="flex items-start gap-2 rounded-lg bg-blue-light/50 p-2.5 text-[11px] text-[#285d6b] leading-snug">
+              <div className="flex items-start gap-2 rounded-lg bg-blue-light/50 p-2.5 text-[11px] text-blue-dark leading-snug">
                 <Truck size={14} className="mt-0.5 shrink-0 text-blue" />
                 <span>{settings.deliveryNote}</span>
               </div>
@@ -856,14 +814,14 @@ export function Storefront({
             </span>
             <button
               type="button"
-              className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-9 px-3 inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink hover:bg-paper-light rounded-lg border border-transparent hover:border-line"
+              className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-9 px-3 inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink hover:bg-paper-light border border-transparent hover:border-line"
               onClick={() => setModal("tour")}
             >
               <HelpCircle size={15} className="text-blue" /> Hướng dẫn đặt hàng
             </button>
             <button
               type="button"
-              className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-9 px-3 inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink hover:bg-paper-light rounded-lg border border-transparent hover:border-line"
+              className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-9 px-3 inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink hover:bg-paper-light border border-transparent hover:border-line"
               onClick={() => {
                 setNewOrder(undefined);
                 setModal("orders");
@@ -941,7 +899,6 @@ export function Storefront({
             setNewOrder(order);
             setOrderCount((current) => current + 1);
             setModal("orders");
-            void refreshCatalog();
           }}
         />
       )}
@@ -953,7 +910,6 @@ export function Storefront({
             setModal(null);
             setNewOrder(undefined);
           }}
-          onRefreshCatalog={() => void refreshCatalog()}
         />
       )}
       {(modal === "tour" || showTour) && <Tour onClose={closeTour} />}

@@ -291,7 +291,7 @@ export function CheckoutSheet({
         <div className="flex items-start gap-2.5 text-[13px] leading-[1.7] text-muted">
           <MapPin size={22} className="mt-0.5 shrink-0 text-blue" aria-hidden="true" />
           <p data-step-intro tabIndex={-1}>Chia sẻ vị trí để shipper dễ tìm bạn và tiệm tính đúng phí giao hàng.{" "}
-            <button type="button" onClick={backToCustomer} className="cursor-pointer text-blue underline underline-offset-2">Sửa thông tin</button>
+            <button type="button" onClick={backToCustomer} className="rounded-button cursor-pointer text-blue underline underline-offset-2">Sửa thông tin</button>
           </p>
         </div>
         <DeliveryPolicy />

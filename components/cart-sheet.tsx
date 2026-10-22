@@ -2,10 +2,8 @@
 import { Button } from "./button";
 import {
   ArrowRight,
-  RefreshCw,
   ShoppingBag,
   Trash2,
-  ShieldCheck,
   AlertCircle,
   Pencil,
 } from "lucide-react";
@@ -96,7 +94,7 @@ export function CartSheet({
       }
     >
       {cart.length === 0 ? (
-        <div className="flex min-h-[280px] flex-col items-center justify-center gap-[17px] px-5 py-10 text-center [&_svg]:text-[#8aa5ab] [&_h3]:font-serif [&_h3]:text-[27px] [&_p]:max-w-[350px] [&_p]:text-xs [&_p]:leading-[1.8] [&_p]:text-muted mobile:min-h-[260px] mobile:gap-4 mobile:py-[30px] mobile:[&_h3]:leading-[1.3] mobile:[&_p]:text-sm">
+        <div className="flex min-h-[280px] flex-col items-center justify-center gap-[17px] px-5 py-10 text-center [&_svg]:text-sky [&_h3]:font-serif [&_h3]:text-[27px] [&_p]:max-w-[350px] [&_p]:text-xs [&_p]:leading-[1.8] [&_p]:text-muted mobile:min-h-[260px] mobile:gap-4 mobile:py-[30px] mobile:[&_h3]:leading-[1.3] mobile:[&_p]:text-sm">
           <ShoppingBag size={48} strokeWidth={1} />
           <h3>Giỏ còn trống, bụng còn thèm?</h3>
           <p>Chọn một món ngon để tiệm chuẩn bị cho bạn nhé.</p>
@@ -106,14 +104,6 @@ export function CartSheet({
         </div>
       ) : (
         <>
-          <div className="flex min-h-8 items-center gap-1.5 bg-[#f0f6f5] px-5 py-1.5 text-[11px] leading-5 text-[#6a858b] mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pl-[max(12px,env(safe-area-inset-left,0px))] [&_svg]:shrink-0">
-            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
-            <span>
-              {loading
-                ? "Đang kiểm tra giá & tồn hàng…"
-                : "Tự động kiểm tra tồn hàng mỗi 15 giây"}
-            </span>
-          </div>
           {error && (
             <div
               className="my-3.5 flex items-start gap-2.5 rounded-[5px] px-[17px] py-[15px] text-[11px] leading-[1.8] [&_svg]:mt-0.5 [&_svg]:shrink-0 [&_button]:ml-auto [&_button]:p-0 [&_button]:text-[10px] [&_button]:font-semibold [&_button]:whitespace-nowrap [&_button]:underline mobile:mx-3 mobile:p-3 mobile:text-[13px] mobile:leading-[1.75] mobile:[&_button]:h-10 mobile:[&_button]:min-h-10 mobile:[&_button]:text-xs bg-[#fbede8] text-[#9f4a3b]"
@@ -122,7 +112,7 @@ export function CartSheet({
               <AlertCircle size={18} />
               <span>{error}</span>
               <button
-                className="cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 rounded-lg font-medium text-xs border border-line bg-white hover:bg-blue-light"
+                className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 font-medium text-xs border border-line bg-white hover:bg-blue-light"
                 onClick={onRetry}
               >
                 Thử lại
@@ -142,14 +132,6 @@ export function CartSheet({
                 <>
                   <h3 className="text-sm leading-5 font-semibold [overflow-wrap:anywhere]">
                     {row?.name || "Đang tải món…"}
-                    {row?.available && !row.issue && (
-                      <span
-                        className="ml-1.5 inline-block size-1.5 rounded-full bg-green align-middle"
-                        role="img"
-                        aria-label="Còn hàng"
-                        title="Còn hàng"
-                      />
-                    )}
                   </h3>
                   <span
                     className={`block text-xs leading-[18px] [overflow-wrap:anywhere] ${canEdit ? "text-blue" : "text-muted"}`}
@@ -167,7 +149,7 @@ export function CartSheet({
               return (
                 <div
                   key={cartKey(line)}
-                  className={`grid grid-cols-[44px_minmax(0,1fr)_40px] items-start gap-x-2.5 border-b border-line py-2 ${row && !row.available ? "[&_img]:grayscale [&_img]:opacity-60" : ""}`}
+                  className="grid grid-cols-[44px_minmax(0,1fr)_40px] items-start gap-x-2.5 border-b border-line py-2"
                 >
                   <ProductImage
                     product={{
@@ -180,7 +162,7 @@ export function CartSheet({
                   <div className="min-w-0">
                     {canEdit ? (
                       <button
-                        className="min-h-10 w-full cursor-pointer rounded-sm text-left touch-manipulation focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
+                        className="rounded-button min-h-10 w-full cursor-pointer text-left touch-manipulation focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
                         aria-label={`Sửa lựa chọn ${row?.name || "món"}`}
                         onClick={() => dismiss(() => onEdit(line))}
                       >
@@ -196,7 +178,7 @@ export function CartSheet({
                         className={`mt-0.5 text-xs leading-[18px] ${row ? "text-red" : "text-muted"}`}
                         role={row?.issue ? "alert" : undefined}
                       >
-                        {row ? row.issue || "Hết hàng" : "Đang kiểm tra…"}
+                        {row ? row.issue || "Vui lòng chọn lại món này." : "Đang tải món…"}
                       </p>
                     )}
                   </div>

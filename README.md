@@ -79,7 +79,9 @@ log server với tiền tố `[zalo]`; đơn vẫn được lưu, không tự th
 - `scripts/`: chuẩn bị DB và menu.
 
 Trang chủ được dựng sẵn, làm mới sau 15 giây khi có truy cập. Trình duyệt lấy menu
-mới khi mở trang, mỗi 45 giây và khi quay lại tab; giỏ kiểm tra lại mỗi 15 giây.
+khi mở trang; menu và giỏ không tự làm mới định kỳ hay khi quay lại tab. Giỏ tính
+lại khi đổi món, số lượng hoặc mở giỏ/bước đặt hàng. Đơn hàng và số đơn đang xử lý
+vẫn tự cập nhật mỗi 10 giây khi trang đang hiển thị.
 API catalog xử lý đơn hết hạn sau khi trả phản hồi. Giỏ/đặt hàng vẫn xử lý hết hạn
 và kiểm tra trực tiếp giá/tồn trước khi xác nhận.
 

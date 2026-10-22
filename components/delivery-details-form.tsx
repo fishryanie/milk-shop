@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Customer } from "@/shared/commerce/types";
 import { customerSchema } from "@/shared/commerce/validation";
 
-const fieldClass = "w-full min-w-0 appearance-none rounded-lg border border-line/70 bg-white px-3 py-2.5 text-sm font-normal text-ink shadow-none outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-muted/60 hover:border-[#cbdcde] focus:border-blue/50 focus:ring-1 focus:ring-blue/10 mobile:text-base";
+const fieldClass = "w-full min-w-0 appearance-none rounded-button border border-line/70 bg-white px-3 py-2.5 text-sm font-normal text-ink shadow-none outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-muted/60 hover:border-blue/25 focus:border-blue/50 focus:ring-1 focus:ring-blue/10 mobile:text-base";
 
 export function DeliveryDetailsForm({ formId, customer, onChange, onContinue }: {
   formId: string;
