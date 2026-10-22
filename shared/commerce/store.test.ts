@@ -49,8 +49,11 @@ test("chỉ lên lịch thông báo sau commit; gửi lại cùng đơn không t
   };
   const first = await f.store.checkout(f.input, "owner", onCreated);
   const second = await f.store.checkout(f.input, "owner", onCreated);
+  expect(first.code).toMatch(/^CTS\d{6}[A-F0-9]{8}$/);
   expect(second.id).toBe(first.id);
+  expect(second.code).toBe(first.code);
   expect(notified).toHaveLength(1);
+  expect(notified[0].code).toBe(first.code);
   expect(f.writes()).toBe(1);
 });
 

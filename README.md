@@ -65,8 +65,9 @@ mới vào nhóm Zalo. Trên hosting, đặt hai biến này trong môi trườn
 build/restart ứng dụng. Token không được dùng biến `NEXT_PUBLIC_*`.
 Thông báo được gửi sau khi lưu đơn thành công, ngoài transaction và sau phản hồi
 cho khách; gửi lại cùng yêu cầu đặt hàng không tạo thông báo trùng. Tin nhắn gồm
-khách hàng, địa chỉ/bản đồ nếu có, món/size/topping, tiền, thanh toán và ghi chú.
-Đơn dài được chia thành nhiều tin (tối đa 2.000 ký tự/tin). Lỗi gửi được ghi trong
+mã đơn hàng, khách hàng, địa chỉ/bản đồ nếu có, món/size/topping, tiền, thanh toán và ghi chú.
+Đơn mới có mã bắt đầu bằng `CTS`. Đơn dài được chia thành nhiều tin (tối đa 2.000
+ký tự/tin), mỗi tin đều kèm mã đơn để đối chiếu. Lỗi gửi được ghi trong
 log server với tiền tố `[zalo]`; đơn vẫn được lưu, không tự thử gửi lại khi lỗi.
 
 ## Runtime

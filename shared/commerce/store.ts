@@ -379,7 +379,7 @@ export class CommerceStore {
       const o: OrderDoc = {
         _id: new ObjectId(),
         storeId: this.storeId,
-        code: `SUA${now.toISOString().slice(2, 10).replaceAll("-", "")}${randomBytes(4).toString("hex").toUpperCase()}`,
+        code: `CTS${now.toISOString().slice(2, 10).replaceAll("-", "")}${randomBytes(4).toString("hex").toUpperCase()}`,
         ownerHash: owner,
         idempotencyKey: input.idempotencyKey,
         requestHash,

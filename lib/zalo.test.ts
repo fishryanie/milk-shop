@@ -18,7 +18,7 @@ afterEach(() => {
 
 function order(): ShopOrder {
   return {
-    id: "507f1f77bcf86cd799439011", code: "SUA261020TEST",
+    id: "507f1f77bcf86cd799439011", code: "CTS261020A1B2C3D4",
     status: "preparing", paymentMethod: "cod",
     createdAt: "2026-10-20T03:15:00Z", updatedAt: "2026-10-20T03:15:00Z",
     expiresAt: "2026-10-20T03:45:00Z", events: [], hasReceipt: false,
@@ -38,12 +38,13 @@ function order(): ShopOrder {
   };
 }
 
-test("thông báo giữ thông tin giao hàng và bỏ tiêu đề, giờ đặt, trạng thái, dòng thu COD", () => {
+test("thông báo có mã đơn CTS, giữ thông tin giao hàng và bỏ tiêu đề, giờ đặt, trạng thái, dòng thu COD", () => {
   const text = formatZaloOrder(order()).join("\n");
+  expect(text).toStartWith(`🧾 Mã đơn hàng: ${order().code}\n\n`);
   for (const value of ["Khách thử", "0900000000",
     "123 Đường Thử", "10.8,106.6", "Size L", "Trân châu", "Ít đá Gọi trước khi giao",
     "2 ×", "Thanh toán khi nhận hàng (COD)", "80.000"]) expect(text).toContain(value);
-  for (const value of ["ĐƠN HÀNG MỚI", "SUA261020TEST", "20/10/2026 10:15", "🕒", "📌", "Tiệm đang chuẩn bị", "Cần thu khi giao:"])
+  for (const value of ["ĐƠN HÀNG MỚI", "20/10/2026 10:15", "🕒", "📌", "Tiệm đang chuẩn bị", "Cần thu khi giao:"])
     expect(text).not.toContain(value);
   expect(text.startsWith("\n")).toBe(false);
   expect(text).not.toContain("Đã thanh toán");
@@ -54,6 +55,7 @@ test("chuyển khoản chưa được coi là đã nhận tiền", () => {
   value.paymentMethod = "bank_transfer";
   value.status = "awaiting_payment";
   const text = formatZaloOrder(value).join("\n");
+  expect(text).toContain(`Mã đơn hàng: ${value.code}`);
   expect(text).toContain("Chuyển khoản ngân hàng");
   expect(text).toContain("Chưa xác nhận nhận tiền");
   expect(text).toContain("Giữ món đến: 20/10/2026 10:45");
@@ -89,7 +91,7 @@ test("đơn tối đa 30 dòng và 12 topping không mất thông tin hoặc vư
   expect(messages.length).toBeGreaterThan(1);
   for (const [index, text] of messages.entries()) {
     expect(text.length).toBeLessThanOrEqual(2000);
-    expect(text).not.toContain(value.code);
+    expect(text).toStartWith(`🧾 Mã đơn hàng: ${value.code}\n\n`);
     expect(text).toContain(`📄 ${index + 1}/${messages.length}`);
   }
   const full = messages.join("\n");

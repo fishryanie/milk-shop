@@ -10,6 +10,7 @@ const oneLine = (value: string) => value.replace(/\s+/g, " ").trim();
 
 export function formatZaloOrder(order: ShopOrder): string[] {
   const { customer, quote } = order;
+  const header = `🧾 Mã đơn hàng: ${order.code}`;
   const blocks = [
     `💳 ${paymentMethodLabels[order.paymentMethod]}`,
     [
@@ -47,13 +48,13 @@ export function formatZaloOrder(order: ShopOrder): string[] {
   ];
 
   // Zalo limits each message to 2,000 characters. Keep all order details,
-  // split at section/item boundaries.
+  // split at section/item boundaries and repeat the order code on each part.
   const messages: string[] = [];
-  let current = "";
+  let current = header;
   for (const block of blocks) {
     if (current && current.length + block.length + 2 > 1960) {
       messages.push(current);
-      current = "";
+      current = header;
     }
     current += `${current ? "\n\n" : ""}${block}`;
   }
