@@ -3,6 +3,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Cái Tiệm Sữa",
     short_name: "Tiệm Sữa",
+    description:
+      "Sữa tuyết, bánh flan và các món từ sữa tươi nguyên chất, tự tay nấu mới mỗi ngày. Đặt món và theo dõi đơn hàng trực tiếp.",
     lang: "vi",
     start_url: "/",
     display: "standalone",

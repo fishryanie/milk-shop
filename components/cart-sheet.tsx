@@ -20,7 +20,6 @@ import {
 export function CartSheet({
   cart,
   quote,
-  loading,
   error,
   settings,
   onChange,
@@ -31,7 +30,6 @@ export function CartSheet({
 }: {
   cart: CartLine[];
   quote: Quote | null;
-  loading: boolean;
   error: string;
   settings: ShopSettings;
   onChange: (cart: CartLine[]) => void;
@@ -76,7 +74,6 @@ export function CartSheet({
               disabled={
                 !isCurrent ||
                 !quote?.valid ||
-                loading ||
                 Boolean(error) ||
                 !settings.isOpen
               }

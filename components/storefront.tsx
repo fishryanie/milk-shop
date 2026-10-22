@@ -1,14 +1,13 @@
 "use client";
 import { Button } from "./button";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import {
   useCallback,
   useEffect,
   useMemo,
-  useOptimistic,
   useRef,
   useState,
-  useTransition,
 } from "react";
 import {
   ArrowDown,
@@ -35,18 +34,20 @@ import {
   defaultSettings,
   money,
   type CartLine,
-  type Quote,
   type ShopOrder,
   type ShopProduct,
   type ShopSettings,
 } from "@/shared/commerce/types";
 import { ProductImage } from "./product-image";
 import { storefrontImage } from "@/lib/storefront-image";
+import headerLogo from "@/public/images/cai-tiem-sua-logo.png";
 import introStyles from "./storefront-intro.module.css";
 import { DeliveryPolicy } from "./delivery-policy";
 import { FloatingFooter } from "./floating-footer";
 import { FeedbackToast } from "./feedback-toast";
 import { animateCartAddition } from "@/lib/cart-motion";
+import { useCartQuote } from "@/lib/use-cart-quote";
+import { CartSheet } from "./cart-sheet";
 
 function SheetLoading() {
   return (
@@ -60,10 +61,6 @@ function SheetLoading() {
 }
 const ProductSheet = dynamic(
   () => import("./product-sheet").then((m) => m.ProductSheet),
-  { loading: SheetLoading },
-);
-const CartSheet = dynamic(
-  () => import("./cart-sheet").then((m) => m.CartSheet),
   { loading: SheetLoading },
 );
 const CheckoutSheet = dynamic(
@@ -93,11 +90,6 @@ export function Storefront({
   const [loading, setLoading] = useState(!initialCatalog);
   const [error, setError] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
-  const [optimisticCart, setOptimisticCart] = useOptimistic(
-    cart,
-    (_current, next: CartLine[]) => next,
-  );
-  const [, startCartTransition] = useTransition();
   const [hydrated, setHydrated] = useState(false);
   const [tourSeen, setTourSeen] = useState(true);
   const [selected, setSelected] = useState<ShopProduct | null>(null);
@@ -106,15 +98,14 @@ export function Storefront({
   >(null);
   const [newOrder, setNewOrder] = useState<ShopOrder | undefined>();
   const [orderCount, setOrderCount] = useState(0);
-  const [quote, setQuote] = useState<Quote | null>(null);
-  const [quoting, setQuoting] = useState(false);
-  const [quoteError, setQuoteError] = useState("");
+  const { quote, quoteError, refreshQuote } = useCartQuote(
+    cart, catalog.products, catalog.settings, modal === "cart",
+  );
   const [toast, setToast] = useState<{ message: string; id: number } | null>(
     null,
   );
   const toastSequence = useRef(0);
   const [editingLine, setEditingLine] = useState<CartLine | undefined>();
-  const quoteSeq = useRef(0);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
@@ -155,8 +146,9 @@ export function Storefront({
       clearTimeout(toastTimer.current);
     };
   }, [loadCatalog]);
+  const orderCountPaused = modal === "orders" || modal === "checkout";
   useEffect(() => {
-    if (modal === "orders" || modal === "checkout") return;
+    if (orderCountPaused) return;
     let cancelled = false;
     const refreshOrderCount = async () => {
       try {
@@ -179,46 +171,13 @@ export function Storefront({
       document.removeEventListener("visibilitychange", refreshWhenVisible);
       window.removeEventListener("focus", refreshWhenVisible);
     };
-  }, [modal]);
+  }, [orderCountPaused]);
   useEffect(() => {
     if (hydrated) saveLocal("milk-cart", cart);
   }, [cart, hydrated]);
   useEffect(() => {
     setTourSeen(readSaved<boolean>("milk-tour-seen", false));
   }, []);
-  const refreshQuote = useCallback(async () => {
-    const sequence = ++quoteSeq.current;
-    if (!cart.length) {
-      setQuote(null);
-      setQuoting(false);
-      return;
-    }
-    setQuoting(true);
-    try {
-      const data = await api<Quote>("/api/cart", {
-        method: "POST",
-        body: JSON.stringify(cart),
-      });
-      if (quoteSeq.current === sequence) {
-        setQuote(data);
-        setQuoteError("");
-      }
-    } catch (err) {
-      if (quoteSeq.current === sequence)
-        setQuoteError(
-          err instanceof Error ? err.message : "Chưa kiểm tra được giỏ hàng.",
-        );
-    } finally {
-      if (quoteSeq.current === sequence) setQuoting(false);
-    }
-  }, [cart]);
-  useEffect(() => {
-    if (modal !== "cart" && modal !== "checkout") return;
-    void refreshQuote();
-    return () => {
-      quoteSeq.current++;
-    };
-  }, [modal, refreshQuote]);
   const settings = catalog.settings;
   const products = catalog.products;
   const address =
@@ -231,7 +190,7 @@ export function Storefront({
     const countsByProduct = new Map<string, number>();
     let count = 0;
     let approximate = 0;
-    for (const line of optimisticCart) {
+    for (const line of cart) {
       const product = byId.get(line.productId);
       count += line.quantity;
       countsByProduct.set(
@@ -251,23 +210,18 @@ export function Storefront({
       approximate += line.quantity * (base + toppings);
     }
     return { count, approximate, countsByProduct };
-  }, [optimisticCart, products]);
+  }, [cart, products]);
   function notify(message: string) {
     setToast({ message, id: ++toastSequence.current });
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 3000);
   }
   function updateCart(next: CartLine[]) {
-    if (!next.length) setQuote(null);
-    setQuoteError("");
-    startCartTransition(() => {
-      setOptimisticCart(next);
-      setCart(next);
-    });
+    setCart(next);
   }
   function add(line: CartLine, origin: DOMRect) {
     if (editingLine) {
-      const next = optimisticCart.filter(
+      const next = cart.filter(
         (l) => cartKey(l) !== cartKey(editingLine),
       );
       const existing = next.find((l) => cartKey(l) === cartKey(line));
@@ -288,19 +242,19 @@ export function Storefront({
       notify("Mỗi đơn tối đa 100 món. Bạn chia thành nhiều đơn nhé.");
       return false;
     }
-    const old = optimisticCart.find((l) => cartKey(l) === cartKey(line));
+    const old = cart.find((l) => cartKey(l) === cartKey(line));
     if (old && old.quantity + line.quantity > 30) {
       notify("Mỗi loại món và topping tối đa 30 phần.");
       return false;
     }
     updateCart(
       old
-        ? optimisticCart.map((l) =>
+        ? cart.map((l) =>
             cartKey(l) === cartKey(line)
               ? { ...l, quantity: l.quantity + line.quantity }
               : l,
           )
-        : [...optimisticCart, line],
+        : [...cart, line],
     );
     animateCartAddition(origin, line.quantity);
     notify("Đã thêm vào giỏ hàng");
@@ -322,39 +276,19 @@ export function Storefront({
         </span>
       </div>
       <header className="sticky top-0 z-20 flex h-20 items-center justify-between gap-8 border-b border-line bg-paper/95 px-[5.5vw] backdrop-blur-[18px] [&_nav]:flex [&_nav]:items-center [&_nav]:gap-[31px] [&_nav]:text-xs [&_nav_a]:flex [&_nav_a]:min-h-11 [&_nav_a]:items-center [&_nav_a]:gap-1.5 [&_nav_button]:min-h-11 [&_nav_button]:p-0 wide:px-[max(5.5vw,calc((100vw-1280px)/2))] tablet:[&_nav]:gap-[23px] mobile:top-[env(safe-area-inset-top,0px)] mobile:h-15 mobile:gap-3 mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:[&_nav]:hidden">
-        <div className="flex shrink-0 items-center gap-2 mobile:min-w-0 mobile:flex-1 mobile:gap-[9px]">
-          <a
-            href="#"
-            className="flex shrink-0 items-center"
-            aria-label={`${settings.name} — Trang chủ`}
-          >
-            <span className="relative grid size-[43px] place-items-center rounded-full border border-blue/30 text-blue hover:border-blue transition-colors [&_i]:absolute [&_i]:top-[7px] [&_i]:right-[5px] [&_i]:size-[5px] [&_i]:rounded-full [&_i]:bg-blue mobile:size-[38px] mobile:shrink-0 tiny:size-[34px]">
-              <Droplet size={28} strokeWidth={1.35} />
-              <i />
-            </span>
-          </a>
-          <div className="min-w-0 flex flex-col justify-center">
-            <a
-              href="#"
-              className="font-serif text-[27px] leading-[1.15] tracking-[-1px] text-ink hover:text-blue transition-colors mobile:truncate mobile:text-[22px] tiny:text-[19px]"
-            >
-              {settings.name}
-            </a>
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group/addr mt-0.5 inline-flex max-w-[340px] items-center gap-1 text-[11px] font-normal tracking-normal text-muted hover:text-blue transition-colors mobile:max-w-[210px] mobile:text-[10px] tiny:max-w-[155px]"
-              title="Mở Google Maps: 748/30 Thống Nhất, An Hội Đông, Hồ Chí Minh"
-            >
-              <MapPin
-                size={11}
-                className="shrink-0 text-blue group-hover/addr:scale-110 transition-transform"
-              />
-              <span className="truncate">{address}</span>
-            </a>
-          </div>
-        </div>
+        <a
+          href="#"
+          className="block w-[228px] shrink-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue mobile:w-[174px] tiny:w-[156px]"
+          aria-label={`${settings.name} — Trang chủ`}
+        >
+          <Image
+            src={headerLogo}
+            alt={settings.name}
+            className="block h-auto w-full"
+            sizes="(max-width: 359px) 156px, (max-width: 760px) 174px, (max-width: 980px) and (max-height: 500px) 174px, 228px"
+            loading="eager"
+          />
+        </a>
         <nav aria-label="Điều hướng chính">
           <a
             className="relative text-blue after:absolute after:bottom-px after:left-0 after:h-0.5 after:w-[18px] after:bg-blue after:content-['']"
@@ -562,11 +496,11 @@ export function Storefront({
             >
               {[1, 2, 3, 4, 5, 6].map((n) => (
                 <div
-                  className="animate-skeleton min-w-0 flex flex-col justify-between rounded-xl sm:rounded-3xl border border-line bg-white p-2.5 sm:p-4 shadow-xs"
+                  className="animate-skeleton min-w-0 flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl border border-line bg-white p-2.5 sm:p-4 shadow-xs"
                   key={n}
                 >
                   <div>
-                    <div className="aspect-[1.16] w-full rounded-lg sm:rounded-2xl bg-line/70" />
+                    <div className="-mx-2.5 -mt-2.5 aspect-square w-[calc(100%+1.25rem)] bg-line/70 sm:-mx-4 sm:-mt-4 sm:w-[calc(100%+2rem)]" />
                     <div className="mt-2.5 sm:mt-3.5 flex items-center justify-between">
                       <span className="h-3 w-12 sm:w-16 rounded bg-line/70" />
                     </div>
@@ -601,18 +535,18 @@ export function Storefront({
                 return (
                   <article
                     key={p.id}
-                    className="group relative min-w-0 flex flex-col justify-between rounded-xl sm:rounded-2xl border border-line bg-white p-2.5 sm:p-4 shadow-[0_2px_10px_rgba(21,52,84,0.03)] transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:border-blue/35 hover:shadow-[0_10px_24px_rgba(1,75,166,0.1)] select-none outline-none [-webkit-tap-highlight-color:transparent]"
+                    className="group relative min-w-0 flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl border border-line bg-white p-2.5 sm:p-4 shadow-[0_2px_10px_rgba(21,52,84,0.03)] transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:border-blue/35 hover:shadow-[0_10px_24px_rgba(1,75,166,0.1)] select-none outline-none [-webkit-tap-highlight-color:transparent]"
                   >
                     {/* Ảnh sản phẩm & Badge */}
                     <button
                       type="button"
                       onClick={() => setSelected(p)}
                       aria-label={`Xem món ${p.name}`}
-                      className="rounded-button relative aspect-square w-full overflow-hidden bg-blue-light/50 block text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer touch-manipulation"
+                      className="relative -mx-2.5 -mt-2.5 aspect-square w-[calc(100%+1.25rem)] shrink-0 overflow-hidden bg-blue-light/50 block text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer touch-manipulation sm:-mx-4 sm:-mt-4 sm:w-[calc(100%+2rem)]"
                     >
                       <ProductImage
                         product={p}
-                        className="h-full w-full object-contain"
+                        className="h-full w-full object-cover"
                       />
 
                       {/* Huy hiệu món nổi bật / badge */}
@@ -643,18 +577,11 @@ export function Storefront({
                     {/* Thông tin sản phẩm */}
                     <div className="flex flex-1 flex-col justify-between pt-2 sm:pt-3 min-w-0">
                       <div className="min-w-0">
-                        {/* Thể loại */}
-                        <div className="flex items-center justify-between gap-1 text-[9.5px] sm:text-[11px]">
-                          <span className="truncate max-w-[65px] sm:max-w-none rounded bg-blue-light px-1.5 py-0.5 font-medium uppercase tracking-wider text-muted text-[8.5px] sm:text-[10px]">
-                            {p.category}
-                          </span>
-                        </div>
-
                         {/* Tên sản phẩm */}
                         <button
                           type="button"
                           onClick={() => setSelected(p)}
-                          className="rounded-button mt-1.5 block w-full text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer"
+                          className="rounded-button block w-full text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer"
                         >
                           <h3 className="font-serif text-[15px] sm:text-[20px] font-normal leading-[1.25] sm:leading-[1.3] text-ink transition-colors duration-200 group-hover:text-blue line-clamp-1 break-words">
                             {p.name}
@@ -865,9 +792,8 @@ export function Storefront({
       )}
       {modal === "cart" && !selected && (
         <CartSheet
-          cart={optimisticCart}
+          cart={cart}
           quote={quote}
-          loading={quoting}
           error={quoteError}
           settings={settings}
           onChange={updateCart}
@@ -885,7 +811,7 @@ export function Storefront({
       )}
       {modal === "checkout" && quote && (
         <CheckoutSheet
-          cart={optimisticCart}
+          cart={cart}
           quote={quote}
           settings={settings}
           onBack={() => setModal("cart")}

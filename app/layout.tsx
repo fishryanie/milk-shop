@@ -18,10 +18,29 @@ const serif = localFont({
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cái Tiệm Sữa — Một chút ngọt lành",
+  metadataBase: new URL(
+    process.env.STOREFRONT_ORIGIN || "https://caitiemsua.com"
+  ),
+  title: "Món từ sữa tươi nguyên chất",
   description:
-    "Sữa tuyết mềm mịn, sữa tươi và topping nhà làm. Chọn món, đặt giao tận nơi, theo dõi đơn hàng ngay tại tiệm.",
+    "Sữa tuyết, bánh flan và các món từ sữa tươi nguyên chất, tự tay nấu mới mỗi ngày. Đặt món và theo dõi đơn hàng trực tiếp.",
   robots: { index: true, follow: true },
+  openGraph: {
+    title: "Cái Tiệm Sữa — Chuẩn vị sữa nhà làm",
+    description:
+      "Sữa tuyết, bánh flan và các món từ sữa tươi nguyên chất, tự tay nấu mới mỗi ngày. Đặt món và theo dõi đơn hàng trực tiếp.",
+    type: "website",
+    locale: "vi_VN",
+    siteName: "Cái Tiệm Sữa",
+    images: [
+      {
+        url: "/icons/app-icon.png",
+        width: 1024,
+        height: 1024,
+        alt: "Cái Tiệm Sữa",
+      },
+    ],
+  },
   icons: {
     icon: [
       { url: "/icons/favicon-32.png?v=milk-logo", sizes: "32x32", type: "image/png" },

@@ -72,15 +72,19 @@ log server với tiền tố `[zalo]`; đơn vẫn được lưu, không tự th
 ## Runtime
 
 - `app/`: trang web và API.
-- `components/`: giao diện; các sheet được tải khi mở.
+- `components/`: giao diện; giỏ hàng có sẵn, các sheet còn lại được tải khi mở.
 - `lib/`: kết nối DB, HTTP, phiên, ảnh và giới hạn truy cập.
 - `shared/commerce/`: tính tiền, kiểm tra dữ liệu, tồn và đơn hàng.
 - `public/`: ảnh và font phục vụ giao diện, kèm giấy phép font.
 - `scripts/`: chuẩn bị DB và menu.
 
 Trang chủ được dựng sẵn, làm mới sau 15 giây khi có truy cập. Trình duyệt lấy menu
-khi mở trang; menu và giỏ không tự làm mới định kỳ hay khi quay lại tab. Giỏ tính
-lại khi đổi món, số lượng hoặc mở giỏ/bước đặt hàng. Đơn hàng và số đơn đang xử lý
+khi mở trang; menu và giỏ không tự làm mới định kỳ hay khi quay lại tab. Giỏ hiện
+món và tính tiền ngay từ menu hiện có, dùng chung cách tính với server. Khi mở giỏ
+hoặc đổi món/số lượng, API kiểm tra lại ở nền sau 150 ms không có thay đổi mới;
+yêu cầu cũ được hủy và bỏ qua kết quả. Mở lại cùng giỏ trong 10 giây dùng báo giá
+đã kiểm tra, không gửi thêm yêu cầu. Bước xác nhận phí ship và đặt đơn luôn lấy
+báo giá mới và kiểm tra giá/tồn trực tiếp ở server. Đơn hàng và số đơn đang xử lý
 vẫn tự cập nhật mỗi 10 giây khi trang đang hiển thị.
 API catalog xử lý đơn hết hạn sau khi trả phản hồi. Giỏ/đặt hàng vẫn xử lý hết hạn
 và kiểm tra trực tiếp giá/tồn trước khi xác nhận.

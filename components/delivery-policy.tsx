@@ -14,11 +14,11 @@ export function DeliveryPolicy({ title = "Phí giao hàng" }: { title?: string }
         </div>
         <div className="flex items-center justify-between gap-3 py-2">
           <dt>Từ 1–3 km</dt>
-          <dd className="font-semibold">10.000đ</dd>
+          <dd className="font-medium">Bạn phụ shop 10k tiền ship nhé</dd>
         </div>
         <div className="flex items-center justify-between gap-3 py-2">
           <dt>Trên 3 km</dt>
-          <dd className="font-semibold">Bạn tự book ship</dd>
+          <dd className="font-medium">Bạn đặt ship đến lấy giúp shop nhé</dd>
         </div>
       </dl>
       <p className="mt-1 text-[11px] leading-[1.6] text-muted">

@@ -6,14 +6,19 @@ export async function POST(request: Request) {
   try {
     sameOrigin(request);
     await session();
-    await rateLimit(request, "quote", 90);
-    const raw = await jsonBody(request);
-    const input = Array.isArray(raw) ? cartSchema.parse(raw) : cartQuoteSchema.parse(raw);
-    const db = await store();
-    await db.expire();
-    return ok(Array.isArray(input)
-      ? await db.quote(input)
-      : await db.quote(input.cart, undefined, undefined, input.customer.location, input.shippingDeferred));
+    const quote = async () => {
+      const raw = await jsonBody(request);
+      const input = Array.isArray(raw) ? cartSchema.parse(raw) : cartQuoteSchema.parse(raw);
+      const db = await store();
+      await db.expire();
+      return Array.isArray(input)
+        ? db.quote(input)
+        : db.quote(input.cart, undefined, undefined, input.customer.location, input.shippingDeferred);
+    };
+    // Count even invalid requests, alongside the independent quote work.
+    // Expiration still finishes before stock is read, and both must succeed.
+    const [data] = await Promise.all([quote(), rateLimit(request, "quote", 90)]);
+    return ok(data);
   } catch (error) {
     return fail(error);
   }
