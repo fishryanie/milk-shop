@@ -34,6 +34,7 @@ export const productSchema = z.strictObject({
       "Mã size không được trùng.")
     .optional(),
   toppingSelection: z.enum(["single", "multiple"]).optional(),
+  maxToppings: z.number().int().positive().nullable().optional(),
   toppings: z
     .array(
       z.strictObject({

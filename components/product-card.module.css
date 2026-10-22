@@ -1,0 +1,85 @@
+.card {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid #a9d9f4;
+  background: linear-gradient(155deg, #fff 62%, #edf8ff 100%);
+  box-shadow: 0 4px 16px #1e78bd12;
+}
+
+@media (hover: hover) {
+  .card:hover {
+    border-color: #76c4ed;
+    box-shadow: 0 10px 26px #087bc424;
+  }
+}
+
+.image {
+  isolation: isolate;
+}
+
+.snow {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.snowcap,
+.snowbank {
+  position: absolute;
+  right: 0;
+  left: 0;
+  width: 100%;
+  color: #fff;
+  filter: drop-shadow(0 2px 1px #6db9e840);
+}
+
+.snowcap {
+  top: 0;
+  height: clamp(16px, 2.5vw, 28px);
+}
+
+.snowbank {
+  bottom: -1px;
+  height: clamp(12px, 2vw, 22px);
+  filter: drop-shadow(0 -2px 2px #d7efff80);
+}
+
+.flake {
+  position: absolute;
+  top: 19px;
+  right: 14px;
+  width: 22px;
+  height: 22px;
+  color: #fff;
+  filter: drop-shadow(0 1px 2px #0862c080);
+}
+
+.smallFlake {
+  top: 43px;
+  right: 35px;
+  width: 12px;
+  height: 12px;
+  opacity: .85;
+}
+
+@media (max-width: 639px) {
+  .card {
+    box-shadow: 0 3px 10px #1e78bd12;
+  }
+
+  .flake {
+    top: 13px;
+    right: 10px;
+    width: 17px;
+    height: 17px;
+  }
+
+  .smallFlake {
+    top: 32px;
+    right: 26px;
+    width: 9px;
+    height: 9px;
+  }
+}

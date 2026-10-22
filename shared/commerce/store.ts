@@ -8,6 +8,7 @@ import {
 import { createHash, randomBytes } from "node:crypto";
 import {
   defaultSettings,
+  getMaxToppings,
   type ShopProduct,
   type ShopSettings,
   type ShopOrder,
@@ -63,6 +64,7 @@ const productDto = ({
   toppings,
   sizes,
   toppingSelection,
+  maxToppings,
   sortOrder,
   revision,
 }: ProductDoc): ShopProduct => ({
@@ -80,6 +82,7 @@ const productDto = ({
   toppings,
   sizes,
   toppingSelection,
+  maxToppings: getMaxToppings({ maxToppings, toppingSelection }),
   sortOrder,
   revision,
 });

@@ -5,6 +5,7 @@ import { ShoppingBag } from "lucide-react";
 import { Modal, useModalMotion } from "./modal";
 import {
   money,
+  getMaxToppings,
   type CartLine,
   type ShopProduct,
 } from "@/shared/commerce/types";
@@ -24,6 +25,7 @@ export function ProductSheet({
   initialLine?: CartLine;
 }) {
   const { dialogRef, dismiss } = useModalMotion(onClose);
+  const maxToppings = getMaxToppings(product);
   const [quantity, setQuantity] = useState(() =>
     Math.min(initialLine?.quantity || 1, product.stock || 30),
   );
@@ -31,7 +33,7 @@ export function ProductSheet({
     () =>
       initialLine?.toppingIds.filter((id) =>
         product.toppings.some((t) => t.id === id && t.available),
-      ).slice(0, product.toppingSelection === "single" ? 1 : undefined) || [],
+      ).slice(0, maxToppings ?? undefined) || [],
   );
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const [sizeId, setSizeId] = useState(() =>
@@ -40,7 +42,7 @@ export function ProductSheet({
   );
   const size = product.sizes?.find((s) => s.id === sizeId);
   const basePrice = size?.price ?? product.price;
-  const singleTopping = product.toppingSelection === "single";
+  const singleTopping = maxToppings === 1;
   const total =
     quantity *
     (basePrice +
@@ -120,7 +122,7 @@ export function ProductSheet({
         {product.toppings.length > 0 && (
           <fieldset className={styles.options}>
             <legend>
-              Topping <span>{singleTopping ? "Chọn tối đa 1 loại" : "Không bắt buộc"}</span>
+              Topping <span>{maxToppings === null ? "Không giới hạn" : `Chọn tối đa ${maxToppings} loại`}</span>
             </legend>
             <div className={styles.optionGrid}>
               {singleTopping && (
@@ -136,14 +138,19 @@ export function ProductSheet({
                     type={singleTopping ? "radio" : "checkbox"}
                     name={singleTopping ? `topping-${product.id}` : undefined}
                     checked={selectedSet.has(t.id)}
-                    disabled={!t.available}
-                    onChange={(e) =>
-                      singleTopping ? setSelected([t.id]) : setSelected((s) =>
-                        e.target.checked
-                          ? [...s, t.id]
-                          : s.filter((id) => id !== t.id),
-                      )
-                    }
+                    disabled={!t.available || (!singleTopping && maxToppings !== null && selected.length >= maxToppings && !selectedSet.has(t.id))}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      if (singleTopping) {
+                        setSelected([t.id]);
+                      } else {
+                        setSelected((s) => {
+                          if (!checked) return s.filter((id) => id !== t.id);
+                          if (maxToppings !== null && s.length >= maxToppings) return s;
+                          return [...s, t.id];
+                        });
+                      }
+                    }}
                   />
                   <span>{t.name}</span>
                   {t.price > 0 && <b>+{money(t.price)}</b>}

@@ -58,7 +58,7 @@ test("giữ quy tắc một topping và chặn đặt hàng khi tiệm nghỉ", 
     [{ ...product, toppingSelection: "single", toppings: [...product.toppings, anotherTopping] }],
     defaultSettings,
   );
-  expect(result.lines[0].issue).toBe("Chỉ được chọn một topping cho mỗi ly.");
+  expect(result.lines[0].issue).toBe("Chỉ được chọn tối đa 1 topping cho mỗi ly.");
   expect(result.valid).toBe(false);
   expect(calculateCart([line], [product], { ...defaultSettings, isOpen: false }).valid).toBe(false);
 });

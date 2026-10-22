@@ -1,5 +1,6 @@
 import {
   cartKey,
+  getMaxToppings,
   type CartLine,
   type QuotedLine,
   type ShopProduct,
@@ -21,6 +22,7 @@ export function calculateCart(
     );
   const lines: QuotedLine[] = cart.map((line) => {
     const product = byId.get(line.productId);
+    const maxToppings = product ? getMaxToppings(product) : null;
     const size = product?.sizes?.find((s) => s.id === line.sizeId);
     const invalidSize = product?.sizes?.length
       ? !size || !size.available
@@ -38,8 +40,8 @@ export function calculateCart(
             ? `Tiệm chỉ còn ${product.stock} phần.`
             : invalidSize
               ? "Size đã thay đổi hoặc hết hàng. Vui lòng chọn lại."
-              : product.toppingSelection === "single" && line.toppingIds.length > 1
-                ? "Chỉ được chọn một topping cho mỗi ly."
+              : maxToppings !== null && line.toppingIds.length > maxToppings
+                ? `Chỉ được chọn tối đa ${maxToppings} topping cho mỗi ${product.unit}.`
                 : toppings.length !== line.toppingIds.length ||
                     toppings.some((t) => !t.available)
                   ? "Topping đã thay đổi hoặc hết hàng. Vui lòng chọn lại."

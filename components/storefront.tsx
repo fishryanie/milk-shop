@@ -27,6 +27,7 @@ import {
   Sparkles,
   Truck,
   ShoppingCartPlus,
+  Snowflake,
 } from "lucide-react";
 import { api, readSaved, saveLocal } from "@/lib/client";
 import {
@@ -42,6 +43,7 @@ import { ProductImage } from "./product-image";
 import { storefrontImage } from "@/lib/storefront-image";
 import headerLogo from "@/public/images/cai-tiem-sua-logo.png";
 import introStyles from "./storefront-intro.module.css";
+import cardStyles from "./product-card.module.css";
 import { DeliveryPolicy } from "./delivery-policy";
 import { FloatingFooter } from "./floating-footer";
 import { FeedbackToast } from "./feedback-toast";
@@ -496,7 +498,7 @@ export function Storefront({
             >
               {[1, 2, 3, 4, 5, 6].map((n) => (
                 <div
-                  className="animate-skeleton min-w-0 flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl border border-line bg-white p-2.5 sm:p-4 shadow-xs"
+                  className={`${cardStyles.card} animate-skeleton min-w-0 flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl p-2.5 sm:p-4`}
                   key={n}
                 >
                   <div>
@@ -535,19 +537,30 @@ export function Storefront({
                 return (
                   <article
                     key={p.id}
-                    className="group relative min-w-0 flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl border border-line bg-white p-2.5 sm:p-4 shadow-[0_2px_10px_rgba(21,52,84,0.03)] transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:border-blue/35 hover:shadow-[0_10px_24px_rgba(1,75,166,0.1)] select-none outline-none [-webkit-tap-highlight-color:transparent]"
+                    className={`${cardStyles.card} group relative min-w-0 flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl p-2.5 sm:p-4 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 select-none outline-none [-webkit-tap-highlight-color:transparent]`}
                   >
                     {/* Ảnh sản phẩm & Badge */}
                     <button
                       type="button"
                       onClick={() => setSelected(p)}
                       aria-label={`Xem món ${p.name}`}
-                      className="relative -mx-2.5 -mt-2.5 aspect-square w-[calc(100%+1.25rem)] shrink-0 overflow-hidden bg-blue-light/50 block text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer touch-manipulation sm:-mx-4 sm:-mt-4 sm:w-[calc(100%+2rem)]"
+                      className={`${cardStyles.image} relative -mx-2.5 -mt-2.5 aspect-square w-[calc(100%+1.25rem)] shrink-0 overflow-hidden bg-blue-light/50 block text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer touch-manipulation sm:-mx-4 sm:-mt-4 sm:w-[calc(100%+2rem)]`}
                     >
                       <ProductImage
                         product={p}
                         className="h-full w-full object-cover"
                       />
+
+                      <span className={cardStyles.snow} aria-hidden="true">
+                        <svg className={cardStyles.snowcap} viewBox="0 0 400 32" preserveAspectRatio="none" fill="currentColor">
+                          <path d="M0 0H400V10C389 6 382 12 374 10C368 9 372 23 364 23C356 23 362 10 351 11C332 14 325 7 308 9C286 12 278 7 262 9C254 10 259 19 252 19C244 19 249 9 238 10C218 12 212 7 194 9C171 12 159 6 139 9C130 10 134 24 126 24C118 24 123 10 112 11C93 13 82 8 64 10C51 12 44 7 33 10C25 13 28 19 21 19C14 18 19 10 11 9C6 9 3 11 0 11Z" />
+                        </svg>
+                        <svg className={cardStyles.snowbank} viewBox="0 0 400 30" preserveAspectRatio="none" fill="currentColor">
+                          <path d="M0 15c14-1 20-9 34-7 15 2 19 10 38 8 20-2 23-7 43-5 19 2 24 10 46 8 21-2 30-6 48-4 25 3 36 7 60 2 20-4 28-8 48-5 19 3 25 5 41 1 17-4 28-4 42 1v16H0Z" />
+                        </svg>
+                        <Snowflake className={cardStyles.flake} strokeWidth={1.7} />
+                        <Snowflake className={`${cardStyles.flake} ${cardStyles.smallFlake}`} strokeWidth={1.6} />
+                      </span>
 
                       {/* Huy hiệu món nổi bật / badge */}
                       {p.badge && (
