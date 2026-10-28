@@ -9,10 +9,12 @@ export function ProductImage({
   product,
   className = "",
   sizes = "(max-width: 760px) 50vw, (max-width: 980px) and (max-height: 500px) 50vw, 33vw",
+  eager = false,
 }: {
   product: Pick<ShopProduct, "imageUrl" | "name" | "imagePosition"> & Partial<Pick<ShopProduct, "category">>;
   className?: string;
   sizes?: string;
+  eager?: boolean;
 }) {
   const [failedUrl, setFailedUrl] = useState("");
   const nameLower = product.name?.toLowerCase() || "";
@@ -38,7 +40,8 @@ export function ProductImage({
         className={`${className} [object-position:var(--product-image-position)]`}
         alt={product.name}
         style={{ "--product-image-position": product.imagePosition || "center" } as CSSProperties}
-        loading="lazy"
+        loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : undefined}
         decoding="async"
         onError={() => setFailedUrl(effectiveUrl)}
       />
@@ -55,7 +58,8 @@ export function ProductImage({
             "--product-image-position": product.imagePosition || "center",
           } as CSSProperties
         }
-        loading="lazy"
+        loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : undefined}
         onError={() => setFailedUrl(effectiveUrl)}
       />
     )

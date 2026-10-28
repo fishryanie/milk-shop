@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { store } from "@/lib/db";
 import { ok, fail } from "@/lib/http";
 import { rateLimit, session } from "@/lib/security";
+import { publicCatalog } from "@/lib/catalog-images";
 export const runtime = "nodejs";
 export async function GET(request: Request) {
   try {
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
         console.error("Failed to expire orders after catalog response:", error instanceof Error ? error.name : "UnknownError");
       }
     });
-    return ok(await db.catalog());
+    return ok(publicCatalog(await db.catalog()));
   } catch (error) {
     return fail(error);
   }

@@ -17,8 +17,12 @@ export function useModalMotion(onClose: () => void) {
     }
     if (dialog.dataset.closing === "true") return;
     const current = getComputedStyle(dialog);
-    dialog.style.setProperty("--modal-exit-from", current.transform);
-    dialog.style.setProperty("--modal-exit-from-opacity", current.opacity);
+    const transform = current.transform;
+    const opacity = current.opacity;
+    const durationValue = current.getPropertyValue("--modal-exit-duration").trim();
+    const duration = parseFloat(durationValue) * (durationValue.endsWith("ms") ? 1 : 1000);
+    dialog.style.setProperty("--modal-exit-from", transform);
+    dialog.style.setProperty("--modal-exit-from-opacity", opacity);
     dialog.dataset.closing = "true";
     dialog.inert = true;
     const finish = () => {
@@ -31,9 +35,6 @@ export function useModalMotion(onClose: () => void) {
     };
     dialog.addEventListener("animationend", onEnd);
     // Fallback for browsers that skip animationend; duration follows the CSS breakpoint.
-    const duration = Math.max(...getComputedStyle(dialog).animationDuration.split(",").map((value) =>
-      parseFloat(value) * (value.trim().endsWith("ms") ? 1 : 1000),
-    ));
     const timer = setTimeout(finish, duration + 80);
     cleanupExit.current = () => {
       clearTimeout(timer);
@@ -73,15 +74,8 @@ export function Modal({
   const id = useId();
   useEffect(() => {
     const dialog = ref.current;
-    dialog?.setAttribute("data-motion", "preparing");
-    dialog?.showModal();
-    // Start after the dialog joins the top layer, including mobile Safari.
-    let enterFrame = requestAnimationFrame(() => {
-      enterFrame = requestAnimationFrame(() => {
-        if (dialog?.dataset.closing !== "true") dialog?.setAttribute("data-motion", "enter");
-      });
-    });
     const body = document.body;
+    // Read page geometry before opening the dialog or changing scroll-lock styles.
     const scrollX = window.scrollX;
     const scrollY = window.scrollY;
     const lockClasses = [
@@ -96,9 +90,6 @@ export function Modal({
     );
     const oldX = body.style.getPropertyValue("--scroll-lock-x");
     const oldY = body.style.getPropertyValue("--scroll-lock-y");
-    body.style.setProperty("--scroll-lock-x", `${-scrollX}px`);
-    body.style.setProperty("--scroll-lock-y", `${-scrollY}px`);
-    body.classList.add(...addedClasses);
     let frame = 0;
     const viewport = window.visualViewport;
     const keepFieldVisible = () => {
@@ -125,16 +116,28 @@ export function Modal({
       // Pinch zoom remains available; only follow an unzoomed visual viewport.
       if (viewport && Math.abs(viewport.scale - 1) > 0.05) return;
       const height = viewport?.height ?? window.innerHeight;
+      const offset = Math.max(0, window.innerHeight - height - (viewport?.offsetTop ?? 0));
       dialog?.setAttribute("data-compact", String(height < 540));
       dialog?.style.setProperty("--sheet-height", `${height}px`);
       dialog?.style.setProperty(
         "--sheet-offset",
-        `${Math.max(0, window.innerHeight - height - (viewport?.offsetTop ?? 0))}px`,
+        `${offset}px`,
       );
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(keepFieldVisible);
     };
     resize();
+    body.style.setProperty("--scroll-lock-x", `${-scrollX}px`);
+    body.style.setProperty("--scroll-lock-y", `${-scrollY}px`);
+    body.classList.add(...addedClasses);
+    dialog?.setAttribute("data-motion", "preparing");
+    dialog?.showModal();
+    // Start after the dialog joins the top layer, including mobile Safari.
+    let enterFrame = requestAnimationFrame(() => {
+      enterFrame = requestAnimationFrame(() => {
+        if (dialog?.dataset.closing !== "true") dialog?.setAttribute("data-motion", "enter");
+      });
+    });
     viewport?.addEventListener("resize", resize);
     viewport?.addEventListener("scroll", resize);
     window.addEventListener("resize", resize);

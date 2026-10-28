@@ -9,6 +9,8 @@
     "start": "next start --port 3200",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "test:agent": "bun test tests/agent-readiness.test.ts",
+    "images:storefront": "bun scripts/optimize-storefront-images.ts",
     "db:setup": "bun scripts/setup-db.ts",
     "seed": "bun scripts/seed.ts"
   },

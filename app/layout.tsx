@@ -1,5 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import {
+  SITE_DESCRIPTION,
+  SITE_TITLE,
+  SITE_URL,
+  siteOpenGraph,
+} from "@/lib/site-content";
 
 const sans = localFont({
   src: [
@@ -18,35 +24,29 @@ const serif = localFont({
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.STOREFRONT_ORIGIN || "https://caitiemsua.com"
-  ),
-  title: "Món từ sữa tươi nguyên chất",
-  description:
-    "Sữa tuyết, bánh flan và các món từ sữa tươi nguyên chất, tự tay nấu mới mỗi ngày. Đặt món và theo dõi đơn hàng trực tiếp.",
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   robots: { index: true, follow: true },
-  openGraph: {
-    title: "Cái Tiệm Sữa — Chuẩn vị sữa nhà làm",
-    description:
-      "Sữa tuyết, bánh flan và các món từ sữa tươi nguyên chất, tự tay nấu mới mỗi ngày. Đặt món và theo dõi đơn hàng trực tiếp.",
-    type: "website",
-    locale: "vi_VN",
-    siteName: "Cái Tiệm Sữa",
-    images: [
-      {
-        url: "/icons/app-icon.png",
-        width: 1024,
-        height: 1024,
-        alt: "Cái Tiệm Sữa",
-      },
-    ],
-  },
+  openGraph: siteOpenGraph,
   icons: {
     icon: [
-      { url: "/icons/favicon-32.png?v=milk-logo", sizes: "32x32", type: "image/png" },
-      { url: "/icons/icon-192.png?v=milk-logo", sizes: "192x192", type: "image/png" },
+      {
+        url: "/icons/favicon-32.png?v=milk-logo",
+        sizes: "32x32",
+        type: "image/png",
+      },
+      {
+        url: "/icons/icon-192.png?v=milk-logo",
+        sizes: "192x192",
+        type: "image/png",
+      },
     ],
-    apple: { url: "/icons/apple-touch-icon.png?v=milk-logo", sizes: "180x180", type: "image/png" },
+    apple: {
+      url: "/icons/apple-touch-icon.png?v=milk-logo",
+      sizes: "180x180",
+      type: "image/png",
+    },
   },
   appleWebApp: {
     capable: true,

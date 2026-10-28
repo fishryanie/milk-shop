@@ -16,7 +16,10 @@ const config: NextConfig = {
     ...new Set(localAddresses),
   ],
   poweredByHeader: false,
-  images: { remotePatterns: [{ protocol: "https", hostname: "**" }] },
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "**" }],
+    localPatterns: [{ pathname: "/media/**" }, { pathname: "/**", search: "" }],
+  },
   serverExternalPackages: ["mongodb", "sharp"],
   async headers() {
     return [

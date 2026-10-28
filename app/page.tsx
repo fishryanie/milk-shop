@@ -1,16 +1,32 @@
-import { store } from "@/lib/db";
-import { Storefront, type Catalog } from "@/components/storefront";
+import type { Metadata } from "next";
+import { Storefront } from "@/components/storefront";
+import { HomepageDetails } from "@/components/homepage-details";
+import { pageCatalog } from "@/lib/catalog";
+import { businessSchema, serializeJsonLd, SITE_URL } from "@/lib/site-content";
 
 // Refresh the prerendered menu without putting database latency on every page view.
 export const revalidate = 15;
 
+export const metadata: Metadata = {
+  alternates: {
+    canonical: `${SITE_URL}/`,
+    types: { "text/markdown": `${SITE_URL}/index.md` },
+  },
+};
+
 export default async function Page() {
-  let initialCatalog: Catalog | undefined;
-  try {
-    const db = await store();
-    initialCatalog = await db.catalog();
-  } catch (error) {
-    console.error("Failed to load catalog on server SSR:", error);
-  }
-  return <Storefront initialCatalog={initialCatalog} />;
+  const initialCatalog = await pageCatalog();
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(businessSchema(initialCatalog.settings)),
+        }}
+      />
+      <Storefront initialCatalog={initialCatalog}>
+        <HomepageDetails />
+      </Storefront>
+    </>
+  );
 }

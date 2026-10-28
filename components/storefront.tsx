@@ -1,13 +1,14 @@
 "use client";
 import { Button } from "./button";
 import dynamic from "next/dynamic";
-import Image from "next/image";
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import {
   ArrowDown,
@@ -32,7 +33,6 @@ import {
 import { api, readSaved, saveLocal } from "@/lib/client";
 import {
   cartKey,
-  defaultSettings,
   money,
   type CartLine,
   type ShopOrder,
@@ -40,8 +40,7 @@ import {
   type ShopSettings,
 } from "@/shared/commerce/types";
 import { ProductImage } from "./product-image";
-import { storefrontImage } from "@/lib/storefront-image";
-import headerLogo from "@/public/images/cai-tiem-sua-logo.png";
+import { storefrontImage, storefrontLogo } from "@/lib/storefront-image";
 import introStyles from "./storefront-intro.module.css";
 import cardStyles from "./product-card.module.css";
 import { DeliveryPolicy } from "./delivery-policy";
@@ -49,7 +48,8 @@ import { FloatingFooter } from "./floating-footer";
 import { FeedbackToast } from "./feedback-toast";
 import { animateCartAddition } from "@/lib/cart-motion";
 import { useCartQuote } from "@/lib/use-cart-quote";
-import { CartSheet } from "./cart-sheet";
+import { StoreMap } from "./store-map";
+import { publicFallbackSettings } from "@/lib/site-content";
 
 function SheetLoading() {
   return (
@@ -61,6 +61,10 @@ function SheetLoading() {
     </div>
   );
 }
+const CartSheet = dynamic(
+  () => import("./cart-sheet").then((m) => m.CartSheet),
+  { loading: SheetLoading },
+);
 const ProductSheet = dynamic(
   () => import("./product-sheet").then((m) => m.ProductSheet),
   { loading: SheetLoading },
@@ -80,13 +84,15 @@ const Tour = dynamic(() => import("./tour").then((m) => m.Tour), {
 export type Catalog = { products: ShopProduct[]; settings: ShopSettings };
 export function Storefront({
   initialCatalog,
+  children,
 }: {
   initialCatalog?: Catalog;
+  children?: ReactNode;
 } = {}) {
   const [catalog, setCatalog] = useState<Catalog>(
     initialCatalog || {
       products: [],
-      settings: defaultSettings,
+      settings: publicFallbackSettings,
     },
   );
   const [loading, setLoading] = useState(!initialCatalog);
@@ -283,12 +289,12 @@ export function Storefront({
           className="block w-[228px] shrink-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue mobile:w-[174px] tiny:w-[156px]"
           aria-label={`${settings.name} — Trang chủ`}
         >
-          <Image
-            src={headerLogo}
+          <img
+            {...storefrontLogo}
             alt={settings.name}
             className="block h-auto w-full"
-            sizes="(max-width: 359px) 156px, (max-width: 760px) 174px, (max-width: 980px) and (max-height: 500px) 174px, 228px"
             loading="eager"
+            decoding="async"
           />
         </a>
         <nav aria-label="Điều hướng chính">
@@ -351,6 +357,7 @@ export function Storefront({
               <span>Nhà làm, mỗi ngày</span>
             </div>
             <h1>
+              <span className="sr-only">Cái Tiệm Sữa — Sữa tuyết, sữa tươi và bánh flan. </span>
               Món ngon từ sữa,
               <br />
               tiệm nấu mới <em>mỗi ngày.</em>
@@ -414,10 +421,9 @@ export function Storefront({
             />
             <img
               {...storefrontImage}
-              className="h-[408px] w-full object-contain tablet:h-[360px] mobile:h-[205px] tiny:h-[190px]"
+              className="mx-auto h-[408px] w-full max-w-[447px] object-contain tablet:h-[360px] tablet:max-w-[394px] mobile:h-[205px] mobile:max-w-none tiny:h-[190px]"
               width={1280}
               height={1170}
-              sizes="(max-width: 760px) 50vw, 45vw"
               alt="Sữa tuyết Oreo và bánh flan caramel"
               loading="eager"
               decoding="async"
@@ -548,6 +554,7 @@ export function Storefront({
                     >
                       <ProductImage
                         product={p}
+                        eager={index < 2}
                         className="h-full w-full object-cover"
                       />
 
@@ -669,8 +676,9 @@ export function Storefront({
           )}
         </section>
         <div className="mx-auto max-w-[1440px] px-[5.5vw] mb-[60px] mobile:px-3 mobile:mb-[30px]">
-          <DeliveryPolicy title="Tiệm giao đến bạn" />
+          <DeliveryPolicy title="Tiệm giao đến bạn" headingLevel={2} />
         </div>
+        {children}
       </main>
       <footer
         id="contact"
@@ -706,18 +714,7 @@ export function Storefront({
                 </a>
 
                 {/* Map nhỏ dưới chữ mở trên google map */}
-                <div className="relative mt-2 w-full max-w-[340px] h-[145px] overflow-hidden rounded-xl border border-line bg-blue-light shadow-[0_2px_8px_#1534540a] transition-all hover:border-blue/50 hover:shadow-md">
-                  <iframe
-                    src={embedUrl}
-                    width="100%"
-                    height="145"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    title={`Bản đồ vị trí ${settings.name}`}
-                    className="h-full w-full block"
-                  />
-                </div>
+                <StoreMap src={embedUrl} title={`Bản đồ vị trí ${settings.name}`} />
               </div>
             )}
           </div>
@@ -773,6 +770,11 @@ export function Storefront({
               © {new Date().getFullYear()} {settings.name}. Mọi quyền được bảo
               lưu.
             </small>
+            <nav aria-label="Thông tin về tiệm" className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-muted">
+              <Link href="/about" prefetch={false} className="hover:text-blue">Giới thiệu</Link>
+              <Link href="/contact" prefetch={false} className="hover:text-blue">Liên hệ</Link>
+              <Link href="/privacy" prefetch={false} className="hover:text-blue">Quyền riêng tư</Link>
+            </nav>
           </div>
         </div>
       </footer>

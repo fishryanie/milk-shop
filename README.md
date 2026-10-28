@@ -2,6 +2,9 @@
 
 Web đặt hàng Next.js, dùng MongoDB chung với hệ thống quản trị.
 
+Các endpoint Markdown, sitemap, schema và hướng dẫn kiểm tra agent được ghi trong
+[docs/agent-readiness.md](docs/agent-readiness.md).
+
 ## Chạy
 
 ```sh
