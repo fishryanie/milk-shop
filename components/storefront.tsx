@@ -8,7 +8,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import {
   ArrowDown,
@@ -49,7 +48,7 @@ import { FeedbackToast } from "./feedback-toast";
 import { animateCartAddition } from "@/lib/cart-motion";
 import { useCartQuote } from "@/lib/use-cart-quote";
 import { StoreMap } from "./store-map";
-import { publicFallbackSettings } from "@/lib/site-content";
+import { productPageLinks, publicFallbackSettings } from "@/lib/site-content";
 
 function SheetLoading() {
   return (
@@ -84,10 +83,8 @@ const Tour = dynamic(() => import("./tour").then((m) => m.Tour), {
 export type Catalog = { products: ShopProduct[]; settings: ShopSettings };
 export function Storefront({
   initialCatalog,
-  children,
 }: {
   initialCatalog?: Catalog;
-  children?: ReactNode;
 } = {}) {
   const [catalog, setCatalog] = useState<Catalog>(
     initialCatalog || {
@@ -543,6 +540,7 @@ export function Storefront({
                 return (
                   <article
                     key={p.id}
+                    id={`mon-${p.id}`}
                     className={`${cardStyles.card} group relative min-w-0 flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl p-2.5 sm:p-4 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 select-none outline-none [-webkit-tap-highlight-color:transparent]`}
                   >
                     {/* Ảnh sản phẩm & Badge */}
@@ -678,7 +676,6 @@ export function Storefront({
         <div className="mx-auto max-w-[1440px] px-[5.5vw] mb-[60px] mobile:px-3 mobile:mb-[30px]">
           <DeliveryPolicy title="Tiệm giao đến bạn" headingLevel={2} />
         </div>
-        {children}
       </main>
       <footer
         id="contact"
@@ -771,7 +768,8 @@ export function Storefront({
               lưu.
             </small>
             <nav aria-label="Thông tin về tiệm" className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-muted">
-              <Link href="/about" prefetch={false} className="hover:text-blue">Giới thiệu</Link>
+              {productPageLinks.map((page) => <Link key={page.path} href={page.path} prefetch={false} className="hover:text-blue">{page.label}</Link>)}
+              <Link href="/about" prefetch={false} className="hover:text-blue">Giới thiệu & cách đặt hàng</Link>
               <Link href="/contact" prefetch={false} className="hover:text-blue">Liên hệ</Link>
               <Link href="/privacy" prefetch={false} className="hover:text-blue">Quyền riêng tư</Link>
             </nav>

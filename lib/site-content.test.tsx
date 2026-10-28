@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { HomepageDetails } from "@/components/homepage-details";
 import { DeliveryPolicy } from "@/components/delivery-policy";
 import {
   businessSchema,
   infoSections,
   pageMetadata,
+  productCollectionSchema,
+  productPageLinks,
+  productsForPage,
   publicFallbackSettings,
   serializeJsonLd,
   SITE_URL,
@@ -40,13 +42,18 @@ const catalog: PublicCatalog = {
   ],
 };
 
-test("homepage has substantial product and ordering prose in server-rendered HTML", () => {
-  const html = renderToStaticMarkup(<HomepageDetails />);
-  const text = html.replace(/<[^>]*>/g, "");
-  expect(text.length).toBeGreaterThan(2500);
-  expect(html).toContain("Sữa tuyết, sữa tươi và bánh flan");
-  expect(html).toContain("JavaScript");
-  expect((html.match(/<h2\b/g) ?? []).length).toBe(3);
+test("introduction, ordering and delivery details live on the about page", () => {
+  const home = pageMarkdown("/", catalog)!;
+  const about = pageMarkdown("/about", catalog)!;
+  for (const heading of [
+    "Sữa tuyết, sữa tươi và bánh flan tại Cái Tiệm Sữa",
+    "Chọn món và theo dõi đơn hàng",
+    "Giao hàng quanh tiệm và hỗ trợ trực tiếp",
+  ]) {
+    expect(home).not.toContain(`## ${heading}`);
+    expect(about).toContain(`## ${heading}`);
+  }
+  expect(home).toContain(`[Giới thiệu](${SITE_URL}/about)`);
 });
 
 test("delivery heading is sequential on the homepage and preserves the default in sheets", () => {
@@ -125,8 +132,75 @@ test("sitemap covers only canonical indexable pages with real dates; robots adve
     `${SITE_URL}/about`,
     `${SITE_URL}/contact`,
     `${SITE_URL}/privacy`,
+    `${SITE_URL}/banh-flan`,
+    `${SITE_URL}/sua-tuyet-van-nam`,
+    `${SITE_URL}/sua-tuoi`,
   ]);
   for (const entry of entries)
     expect(entry.lastModified).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   expect(robots().sitemap).toBe(`${SITE_URL}/sitemap.xml`);
 });
+
+test("product pages use current matching products and exclude hidden items", () => {
+  const base = catalog.products[0];
+  const products = [
+    {
+      ...base,
+      id: "flan",
+      name: "Flan chén",
+      category: "Flan",
+      status: "sold_out" as const,
+    },
+    { ...base, id: "snow", name: "Sữa Tuyết Vân Nam", category: "Sữa tuyết" },
+    {
+      ...base,
+      id: "milk",
+      name: "Sữa tươi nguyên chất",
+      category: "Sữa tươi",
+      price: 27000,
+    },
+    {
+      ...base,
+      id: "hidden",
+      name: "Flan xô",
+      category: "Flan",
+      status: "hidden" as const,
+    },
+  ];
+  expect(productsForPage("/banh-flan", products).map((p) => p.id)).toEqual([
+    "flan",
+  ]);
+  expect(
+    productsForPage("/sua-tuyet-van-nam", products).map((p) => p.id),
+  ).toEqual(["snow"]);
+  expect(productsForPage("/sua-tuoi", products).map((p) => p.id)).toEqual([
+    "milk",
+  ]);
+  expect(productsForPage("/about", products)).toEqual([]);
+  const markdown = pageMarkdown("/sua-tuoi", { ...catalog, products })!;
+  expect(markdown).toContain("27.000");
+  expect(markdown).toContain("tiệt trùng");
+  expect(markdown).not.toContain("### Flan chén");
+  expect(markdown).not.toContain("### Sữa Tuyết Vân Nam");
+  const schema = productCollectionSchema(
+    "/banh-flan",
+    productsForPage("/banh-flan", products),
+  );
+  expect(schema.mainEntity.numberOfItems).toBe(1);
+  expect(schema.mainEntity.itemListElement[0].url).toBe(
+    `${SITE_URL}/#mon-flan`,
+  );
+});
+
+test.each(productPageLinks)(
+  "$path has focused content and its own canonical",
+  ({ path }) => {
+    expect(pageMetadata(path).alternates?.canonical).toBe(`${SITE_URL}${path}`);
+    expect(
+      infoSections(path, publicFallbackSettings)
+        .flatMap((section) => section.paragraphs)
+        .join(" ").length,
+    ).toBeGreaterThan(500);
+    expect(pageMarkdown(path, catalog)).toContain(publicFallbackSettings.phone);
+  },
+);

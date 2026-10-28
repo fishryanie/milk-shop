@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { indexablePages, SITE_URL } from "@/lib/site-content";
+import { indexablePages, productPageLinks, SITE_URL } from "@/lib/site-content";
 
 // Run against `next start` or a deployed preview. No orders are created.
 const base = process.env.AGENT_TEST_BASE_URL;
@@ -36,9 +36,13 @@ describe.skipIf(!base)("public agent readiness HTTP contracts", () => {
           // cache from confusing HTML with the negotiated Markdown representation.
           expect(response.headers.get("Cache-Control")).toContain("no-store");
           expect(body).toContain('<html lang="vi"');
-          const canonical = body.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
+          const canonical = body.match(
+            /<link rel="canonical" href="([^"]+)"/,
+          )?.[1];
           expect(canonical).toBeTruthy();
-          expect(new URL(canonical!).href).toBe(new URL(`${SITE_URL}${path}`).href);
+          expect(new URL(canonical!).href).toBe(
+            new URL(`${SITE_URL}${path}`).href,
+          );
           expect(textContent(body).length).toBeGreaterThan(500);
         }
       }
@@ -46,15 +50,19 @@ describe.skipIf(!base)("public agent readiness HTTP contracts", () => {
     15000,
   );
 
-  test("raw homepage has identity, schema, sequential headings and a content ratio above 5%", async () => {
+  test("raw homepage keeps identity, schema and links to detailed information", async () => {
     const html = await (await read("/")).text();
     const text = textContent(html);
     expect(text.length).toBeGreaterThan(500);
-    expect(text.length / html.length).toBeGreaterThanOrEqual(0.05);
+    expect(text).not.toContain("Chọn món và theo dõi đơn hàng");
+    expect(text).not.toContain("Giao hàng quanh tiệm và hỗ trợ trực tiếp");
+    expect(html).toContain('href="/about"');
     expect(html).not.toContain("data:image/");
     expect(html).toContain('property="og:type" content="website"');
     expect(html).toContain('property="og:image"');
-    expect(html).toMatch(/<title>Cái Tiệm Sữa[^<]*Sữa tuyết/);
+    expect(html).toMatch(/<title>Cái Tiệm Sữa[^<]*sữa tuyết/i);
+    for (const page of productPageLinks)
+      expect(html).toContain(`href="${page.path}"`);
     const headings = [...html.matchAll(/<h([1-6])\b/g)].map((match) =>
       Number(match[1]),
     );
@@ -125,12 +133,9 @@ describe.skipIf(!base)("public agent readiness HTTP contracts", () => {
   });
 
   test("Markdown aliases and llms.txt supply valid linked guidance", async () => {
-    for (const path of [
-      "/index.md",
-      "/about.md",
-      "/contact.md",
-      "/privacy.md",
-    ]) {
+    for (const path of indexablePages.map((path) =>
+      path === "/" ? "/index.md" : `${path}.md`,
+    )) {
       const response = await read(path, "*/*");
       expect(response.status).toBe(200);
       expect(response.headers.get("Content-Type")).toContain("text/markdown");
@@ -156,6 +161,35 @@ describe.skipIf(!base)("public agent readiness HTTP contracts", () => {
       await response.arrayBuffer();
     }
   }, 15000);
+
+  test.each(productPageLinks)(
+    "$path has visible products and working links without JavaScript",
+    async ({ path }) => {
+      const html = await (await read(path)).text();
+      const visible = textContent(html);
+      expect(visible).toContain("Món và giá hiện tại");
+      if (path === "/sua-tuoi") {
+        expect(visible).toContain("Sữa bò tươi tiệt trùng");
+        expect(visible).not.toContain("sữa bò thô");
+      }
+      const schema = JSON.parse(
+        html.match(
+          /<script type="application\/ld\+json">([\s\S]*?)<\/script>/,
+        )![1],
+      );
+      expect(schema["@type"]).toBe("CollectionPage");
+      expect(schema.url).toBe(`${SITE_URL}${path}`);
+      const home = await (await read("/")).text();
+      const markdown = await (await read(path, "text/markdown")).text();
+      for (const item of schema.mainEntity.itemListElement) {
+        expect(visible).toContain(item.name);
+        expect(markdown).toContain(`### ${item.name}`);
+        const fragment = new URL(item.url).hash.slice(1);
+        expect(html).toContain(`href="/#${fragment}"`);
+        expect(home).toContain(`id="${fragment}"`);
+      }
+    },
+  );
 
   test("sitemap and robots are valid discovery responses with all indexable URLs", async () => {
     const response = await read("/sitemap.xml", "*/*");

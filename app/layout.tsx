@@ -27,18 +27,18 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
-  robots: { index: true, follow: true },
+  robots: { index: true, follow: true, "max-image-preview": "large" },
   openGraph: siteOpenGraph,
   icons: {
     icon: [
       {
-        url: "/icons/favicon-32.png?v=milk-logo",
-        sizes: "32x32",
+        url: "/icons/icon-192.png?v=milk-logo",
+        sizes: "192x192",
         type: "image/png",
       },
       {
-        url: "/icons/icon-192.png?v=milk-logo",
-        sizes: "192x192",
+        url: "/icons/favicon-32.png?v=milk-logo",
+        sizes: "32x32",
         type: "image/png",
       },
     ],

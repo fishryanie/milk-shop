@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
-import { defaultSettings, type ShopSettings } from "@/shared/commerce/types";
+import {
+  defaultSettings,
+  type ShopProduct,
+  type ShopSettings,
+} from "@/shared/commerce/types";
 
 export const SITE_URL = "https://caitiemsua.com";
 export const SITE_NAME = "Cái Tiệm Sữa";
 export const SITE_TITLE =
-  "Cái Tiệm Sữa — Sữa tuyết, sữa tươi & bánh flan tại TP.HCM";
+  "Cái Tiệm Sữa — Bánh flan, sữa tuyết Vân Nam & sữa tươi";
 export const SITE_DESCRIPTION =
-  "Cái Tiệm Sữa tại An Hội Đông, TP.HCM: sữa tuyết Vân Nam, sữa tươi và bánh flan. Xem thực đơn, chọn size, topping và đặt giao hàng trực tiếp tại caitiemsua.com.";
+  "Bánh flan chén, bánh flan xô, sữa tuyết Vân Nam và sữa tươi tại Cái Tiệm Sữa, An Hội Đông, TP.HCM. Xem giá, chọn topping và đặt giao hàng trực tiếp.";
 export const siteOpenGraph = {
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
@@ -16,10 +20,10 @@ export const siteOpenGraph = {
   siteName: SITE_NAME,
   images: [
     {
-      url: `${SITE_URL}/icons/app-icon.png`,
-      width: 1024,
-      height: 1024,
-      alt: SITE_NAME,
+      url: `${SITE_URL}/images/dessert-duo-1280.webp`,
+      width: 1280,
+      height: 1170,
+      alt: "Sữa tuyết Oreo và bánh flan caramel tại Cái Tiệm Sữa",
     },
   ],
 };
@@ -29,7 +33,7 @@ export const publicFallbackSettings: ShopSettings = {
   phone: "0767271126",
 };
 
-export const homepageSections = [
+const aboutSections = [
   {
     heading: "Sữa tuyết, sữa tươi và bánh flan tại Cái Tiệm Sữa",
     paragraphs: [
@@ -49,14 +53,39 @@ export const homepageSections = [
     heading: "Giao hàng quanh tiệm và hỗ trợ trực tiếp",
     paragraphs: [
       "Phí giao được tính theo khoảng cách đường chim bay từ tiệm đến vị trí nhận. Đơn dưới 1 km được miễn phí giao; từ 1 đến 3 km có phí 10.000 đồng. Với địa chỉ trên 3 km, bạn chủ động đặt dịch vụ giao hàng đến lấy giúp tiệm. Hãy kiểm tra vị trí và phí trên màn hình xác nhận vì địa chỉ gõ vào có thể cần bổ sung vị trí trên bản đồ. Thời gian giao sẽ được tiệm liên hệ xác nhận; website không cam kết một thời gian đến cố định cho mọi địa chỉ.",
-      "Bạn có thể xem địa chỉ, số điện thoại và đường dẫn bản đồ ở phần Liên hệ ngay bên dưới hoặc trên trang Liên hệ của website. Trước khi đến lấy hay nhờ người giao đến, hãy liên hệ để tiệm xác nhận món và thời gian chuẩn bị. Trang Giới thiệu giải thích cách đặt món tại tiệm; trang Quyền riêng tư cho biết dữ liệu nào được dùng khi mua hàng. Nếu thực đơn chưa tải được, thông tin giới thiệu và các trang hỗ trợ vẫn đọc được mà không cần bật JavaScript; thao tác giỏ hàng và gửi đơn cần JavaScript để kiểm tra với hệ thống.",
+      "Bạn có thể xem địa chỉ, số điện thoại và đường dẫn bản đồ trên trang Liên hệ của website. Trước khi đến lấy hay nhờ người giao đến, hãy liên hệ để tiệm xác nhận món và thời gian chuẩn bị. Trang Quyền riêng tư cho biết dữ liệu nào được dùng khi mua hàng.",
     ],
   },
 ];
 
-export type InfoPath = "/about" | "/contact" | "/privacy";
+export const productPageLinks = [
+  { path: "/banh-flan", label: "Bánh flan chén & flan xô", category: "flan" },
+  {
+    path: "/sua-tuyet-van-nam",
+    label: "Sữa tuyết Vân Nam",
+    category: "sua tuyet",
+  },
+  { path: "/sua-tuoi", label: "Sữa tươi", category: "sua tuoi" },
+] as const;
+export type ProductPagePath = (typeof productPageLinks)[number]["path"];
+export type InfoPath = "/about" | "/contact" | "/privacy" | ProductPagePath;
 export type ContentSection = { heading: string; paragraphs: string[] };
 export const pageDefinitions = {
+  "/banh-flan": {
+    title: "Bánh flan chén, flan xô tại TP.HCM | Cái Tiệm Sữa",
+    description:
+      "Xem bánh flan mini, flan chén và bánh flan xô tại Cái Tiệm Sữa, An Hội Đông, TP.HCM. Giá, phần bánh và topping cập nhật từ thực đơn của tiệm.",
+  },
+  "/sua-tuyet-van-nam": {
+    title: "Sữa tuyết Vân Nam tại TP.HCM | Cái Tiệm Sữa",
+    description:
+      "Sữa tuyết Vân Nam tại Cái Tiệm Sữa, An Hội Đông, TP.HCM. Xem giá size M, L, topping đang có và đặt món trực tiếp trên website.",
+  },
+  "/sua-tuoi": {
+    title: "Sữa bò tươi tiệt trùng tại TP.HCM | Cái Tiệm Sữa",
+    description:
+      "Sữa bò tươi tiệt trùng tại Cái Tiệm Sữa, An Hội Đông, TP.HCM. Xem sữa tươi nguyên chất, giá bán, dung tích chai và đặt giao hàng trực tiếp.",
+  },
   "/about": {
     title: "Giới thiệu Cái Tiệm Sữa",
     description:
@@ -75,7 +104,13 @@ export const pageDefinitions = {
 } as const;
 
 // These dates describe actual content changes, rather than sitemap request time.
-export const indexablePages = ["/", "/about", "/contact", "/privacy"] as const;
+export const indexablePages = [
+  "/",
+  "/about",
+  "/contact",
+  "/privacy",
+  ...productPageLinks.map(({ path }) => path),
+] as const;
 export const CONTENT_UPDATED = "2026-10-28";
 
 export function pageMetadata(path: InfoPath): Metadata {
@@ -100,10 +135,43 @@ export function infoSections(
   path: InfoPath,
   settings: ShopSettings,
 ): ContentSection[] {
+  const productIntroduction: Partial<Record<InfoPath, ContentSection>> = {
+    "/banh-flan": {
+      heading: "Chọn bánh flan theo phần bạn thích",
+      paragraphs: [
+        "Bạn thích một phần flan nhỏ hay muốn thưởng thức cả xô? Cái Tiệm Sữa có bánh flan mini, flan chén và bánh flan xô trong thực đơn. Mỗi loại có đơn vị bán riêng, giúp bạn chọn phần bánh phù hợp. Xem các món bên dưới để biết giá, phần bánh và tình trạng hiện tại trước khi đặt.",
+        "Flan mini được bán theo lốc; flan chén là phần bánh đựng trong chén. Với flan xô, bạn có thể xem mô tả và những lựa chọn topping trong phần chi tiết món ở thực đơn. Giá và lựa chọn đang bán được cập nhật cùng hệ thống đặt hàng của tiệm.",
+      ],
+    },
+    "/sua-tuyet-van-nam": {
+      heading: "Chọn size và topping cho sữa tuyết Vân Nam",
+      paragraphs: [
+        "Sữa tuyết Vân Nam là một trong những món tại Cái Tiệm Sữa ở An Hội Đông, TP.HCM. Bạn có thể chọn size M hoặc L, rồi chọn topping theo sở thích trong phần chi tiết món. Danh sách bên dưới hiển thị giá và tình trạng từ thực đơn của tiệm.",
+        "Giá mỗi size và phần topping được hiển thị trước khi bạn thêm món vào giỏ. Nếu một lựa chọn vừa hết, hãy xem các lựa chọn còn lại trong thực đơn. Bạn có thể đặt sữa tuyết cùng bánh flan hoặc sữa tươi trong một đơn và kiểm tra tổng tiền ở giỏ hàng.",
+      ],
+    },
+    "/sua-tuoi": {
+      heading: "Sữa bò tươi tiệt trùng tại Cái Tiệm Sữa",
+      paragraphs: [
+        "Bạn đang tìm mua sữa bò tươi tại An Hội Đông, TP.HCM? Cái Tiệm Sữa bán sữa tươi nguyên chất đã tiệt trùng. Xem thông tin món bên dưới để kiểm tra giá bán, dung tích mỗi chai và tình trạng hiện tại. Khi đặt, hãy chọn đúng số lượng chai cần mua và kiểm tra lại giỏ trước khi xác nhận.",
+        "Với sữa bò tươi tiệt trùng của tiệm, bạn có thể liên hệ để hỏi rõ nguồn sữa, thành phần và hướng dẫn bảo quản cho chai đang bán. Nếu cần mua nhiều chai hoặc có yêu cầu riêng, hãy gọi tiệm để được hỗ trợ trước khi đặt.",
+      ],
+    },
+  };
+  const introduction = productIntroduction[path];
+  if (introduction)
+    return [
+      introduction,
+      {
+        heading: "Đặt món và nhận hàng tại An Hội Đông, TP.HCM",
+        paragraphs: [
+          `Tiệm ở ${settings.address}, Thành phố Hồ Chí Minh. Chọn món trong thực đơn, kiểm tra số lượng và điền địa chỉ nhận để xem phí giao trước khi gửi đơn. Bạn có thể chọn thanh toán khi nhận hàng hoặc chuyển khoản theo hướng dẫn. Gọi ${settings.phone} để hỏi món hoặc hẹn đến lấy; tiệm sẽ xác nhận thời gian chuẩn bị và giao hàng.`,
+        ],
+      },
+    ];
   if (path === "/about")
     return [
-      homepageSections[0],
-      homepageSections[1],
+      ...aboutSections,
       {
         heading: "Ghé tiệm và tìm thông tin chính thức",
         paragraphs: [
@@ -151,6 +219,49 @@ export function infoSections(
       ],
     },
   ];
+}
+
+export function productsForPage(path: InfoPath, products: ShopProduct[]) {
+  const group = productPageLinks.find((page) => page.path === path);
+  if (!group) return [];
+  const normalize = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  return products.filter(
+    (product) =>
+      product.status !== "hidden" &&
+      (normalize(product.category).includes(group.category) ||
+        normalize(product.name).includes(group.category)),
+  );
+}
+
+export function productCollectionSchema(
+  path: ProductPagePath,
+  products: ShopProduct[],
+) {
+  const page = pageDefinitions[path];
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": `${SITE_URL}${path}#webpage`,
+    url: `${SITE_URL}${path}`,
+    name: page.title,
+    description: page.description,
+    inLanguage: "vi-VN",
+    about: { "@id": `${SITE_URL}/#organization` },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: products.length,
+      itemListElement: products.map((product, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: product.name,
+        url: `${SITE_URL}/#mon-${product.id}`,
+      })),
+    },
+  };
 }
 
 export function businessSchema(settings: ShopSettings) {

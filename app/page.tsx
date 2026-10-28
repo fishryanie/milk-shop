@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Storefront } from "@/components/storefront";
-import { HomepageDetails } from "@/components/homepage-details";
 import { pageCatalog } from "@/lib/catalog";
 import { businessSchema, serializeJsonLd, SITE_URL } from "@/lib/site-content";
 
@@ -24,9 +23,7 @@ export default async function Page() {
           __html: serializeJsonLd(businessSchema(initialCatalog.settings)),
         }}
       />
-      <Storefront initialCatalog={initialCatalog}>
-        <HomepageDetails />
-      </Storefront>
+      <Storefront initialCatalog={initialCatalog} />
     </>
   );
 }

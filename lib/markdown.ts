@@ -1,9 +1,10 @@
 import { money } from "@/shared/commerce/types";
 import type { PublicCatalog } from "./catalog-images";
 import {
-  homepageSections,
   infoSections,
   pageDefinitions,
+  productPageLinks,
+  productsForPage,
   SITE_DESCRIPTION,
   SITE_NAME,
   SITE_TITLE,
@@ -16,6 +17,9 @@ export const markdownAliases: Record<string, string> = {
   "/about.md": "/about",
   "/contact.md": "/contact",
   "/privacy.md": "/privacy",
+  ...Object.fromEntries(
+    productPageLinks.map(({ path }) => [`${path}.md`, path]),
+  ),
 };
 
 // Database values are text, not trusted Markdown or HTML.
@@ -29,43 +33,52 @@ export const markdownText = (value: string) =>
 
 export function pageMarkdown(path: string, catalog: PublicCatalog) {
   const { settings, products } = catalog;
-  const links = `## Thông tin chính thức\n\n- [Giới thiệu](${SITE_URL}/about)\n- [Liên hệ](${SITE_URL}/contact)\n- [Quyền riêng tư](${SITE_URL}/privacy)\n- [Hướng dẫn cho agent](${SITE_URL}/llms.txt)\n- [Sitemap](${SITE_URL}/sitemap.xml)\n`;
+  const productLinks = productPageLinks
+    .map((page) => `- [${page.label}](${SITE_URL}${page.path})`)
+    .join("\n");
+  const links = `## Thông tin chính thức\n\n${productLinks}\n- [Giới thiệu](${SITE_URL}/about)\n- [Liên hệ](${SITE_URL}/contact)\n- [Quyền riêng tư](${SITE_URL}/privacy)\n- [Hướng dẫn cho agent](${SITE_URL}/llms.txt)\n- [Sitemap](${SITE_URL}/sitemap.xml)\n`;
   if (path !== "/" && !Object.hasOwn(pageDefinitions, path)) return null;
-  const sections =
-    path === "/" ? homepageSections : infoSections(path as InfoPath, settings);
+  const sections = path === "/" ? [] : infoSections(path as InfoPath, settings);
   const title =
     path === "/" ? SITE_TITLE : pageDefinitions[path as InfoPath].title;
+  const description =
+    path === "/"
+      ? SITE_DESCRIPTION
+      : pageDefinitions[path as InfoPath].description;
   const prose = sections
     .map(
       (section) =>
         `## ${section.heading}\n\n${section.paragraphs.join("\n\n")}`,
     )
     .join("\n\n");
-  const menu =
-    path === "/"
-      ? `## Thực đơn hiện tại\n\n${
-          products.length
-            ? products
-                .map((p) => {
-                  const sizes = p.sizes
-                    ?.map(
-                      (s) =>
-                        `${markdownText(s.name)}: ${money(s.price)}${s.available ? "" : " (hết)"}`,
-                    )
-                    .join("; ");
-                  const toppings = p.toppings
-                    .map(
-                      (t) =>
-                        `${markdownText(t.name)}: ${money(t.price)}${t.available ? "" : " (hết)"}`,
-                    )
-                    .join("; ");
-                  return `### ${markdownText(p.name)}\n\n${markdownText(p.description)}\n\n- Giá: ${money(p.price)}/${markdownText(p.unit)}${sizes ? `\n- Kích cỡ: ${sizes}` : ""}${toppings ? `\n- Topping: ${toppings}` : ""}\n- Tình trạng: ${p.status === "available" && p.stock !== 0 ? "Còn món" : "Tạm hết"}`;
-                })
-                .join("\n\n")
-            : "Thực đơn trực tiếp đang chưa tải được. Vui lòng liên hệ tiệm để kiểm tra món và giá; không xem đây là danh sách món còn bán."
-        }\n\n`
-      : "";
-  return `# ${title}\n\n${SITE_DESCRIPTION}\n\n${menu}${prose}\n\n## Liên hệ\n\n- Tiệm: ${markdownText(settings.name)}\n- Địa chỉ: ${markdownText(settings.address)}\n- Điện thoại: ${markdownText(settings.phone)}\n- Website: ${SITE_URL}/\n\n${links}`;
+  const pageProducts =
+    path === "/" ? products : productsForPage(path as InfoPath, products);
+  const hasMenu =
+    path === "/" || productPageLinks.some((page) => page.path === path);
+  const menu = hasMenu
+    ? `## Thực đơn hiện tại\n\n${
+        pageProducts.length
+          ? pageProducts
+              .map((p) => {
+                const sizes = p.sizes
+                  ?.map(
+                    (s) =>
+                      `${markdownText(s.name)}: ${money(s.price)}${s.available ? "" : " (hết)"}`,
+                  )
+                  .join("; ");
+                const toppings = p.toppings
+                  .map(
+                    (t) =>
+                      `${markdownText(t.name)}: ${money(t.price)}${t.available ? "" : " (hết)"}`,
+                  )
+                  .join("; ");
+                return `### ${markdownText(p.name)}\n\n${markdownText(p.description)}\n\n- Giá: ${money(p.price)}/${markdownText(p.unit)}${sizes ? `\n- Kích cỡ: ${sizes}` : ""}${toppings ? `\n- Topping: ${toppings}` : ""}\n- Tình trạng: ${p.status === "available" && p.stock !== 0 ? "Còn món" : "Tạm hết"}`;
+              })
+              .join("\n\n")
+          : "Thực đơn trực tiếp đang chưa tải được. Vui lòng liên hệ tiệm để kiểm tra món và giá; không xem đây là danh sách món còn bán."
+      }\n\n`
+    : "";
+  return `# ${title}\n\n${description}\n\n${menu}${prose}\n\n## Liên hệ\n\n- Tiệm: ${markdownText(settings.name)}\n- Địa chỉ: ${markdownText(settings.address)}\n- Điện thoại: ${markdownText(settings.phone)}\n- Website: ${SITE_URL}/\n\n${links}`;
 }
 
 export function agentInstructions() {

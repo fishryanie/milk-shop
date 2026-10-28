@@ -10,7 +10,7 @@ The Ora / Is Agentic score has not been rerun; no new score is claimed.
 | Audit item | Implementation |
 | --- | --- |
 | Agent-friendly 404s | Unmatched URLs return real HTTP 404; a Markdown request gets a Markdown explanation and links to llms.txt and sitemap.xml. HTML errors remain HTML. |
-| Content without JavaScript | The existing server-rendered menu plus product, ordering and delivery information are present in the raw homepage. Headings are sequential. |
+| Content without JavaScript | The homepage keeps the server-rendered menu, concise delivery policy and contact links. Detailed introduction, ordering and delivery guidance live on `/about`. Headings are sequential. |
 | Markdown negotiation | `/`, `/about`, `/contact`, `/privacy` negotiate HTML or Markdown. Markdown responses include `Content-Type: text/markdown; charset=utf-8` and `Vary: Accept`. Quality values, specificity, q=0, wildcards and 406 are handled. |
 | Brand discovery | The homepage title, description and H1 identify Cái Tiệm Sữa and its products. The visible hero design remains intact. Ranking still requires indexing and external signals. |
 | Structured identity | The homepage emits escaped Organization / FoodEstablishment JSON-LD with description, canonical URL, logo, phone, ContactPoint and PostalAddress. Contact fields come from the same catalog settings used by the storefront. |
@@ -35,9 +35,11 @@ toppings, cart, stock checks, checkout and order storage retain their commerce
 logic. The catalog API still reads the live database; page, Markdown and image
 requests share a read-only 15-second catalog cache.
 
-Measured new homepage: 102,985 bytes, 5,168 meaningful text characters and a
-5.26% text-to-HTML character ratio. Response size fell 94.09%. The exact ratio
-can change as the menu changes; the HTTP test guards the 5% threshold.
+The initial agent-readiness deployment measured 102,985 bytes, 5,168 meaningful
+text characters and a 5.26% text-to-HTML character ratio. Response size fell
+94.09%. These measurements predate moving the long introduction to `/about`.
+The HTTP tests now check useful homepage content and links rather than enforce
+a text ratio that encourages unnecessary prose on the storefront.
 
 ## Cache handling
 
@@ -79,7 +81,7 @@ order reads (401) and receipt GET (405).
 The HTTP suite covers HTML and Markdown on all four pages, explicit `.md`
 aliases, llms.txt and its links, sitemap.xml, robots.txt, nested missing URLs,
 Markdown and HTML 404s, Accept weights, 406, cache safety, HEAD, schema, canonical
-metadata, heading order, text ratio, catalog JSON and every embedded product/QR
+metadata, heading order, informational links, catalog JSON and every embedded product/QR
 image. The existing `/api/cart` GET remains 405 and static images remain images.
 
 To verify a deployed URL, use the same suite:
