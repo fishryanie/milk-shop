@@ -1,4 +1,4 @@
-.card {
+.sf-card-skin {
   position: relative;
   isolation: isolate;
   border: 1px solid #a9d9f4;
@@ -7,17 +7,17 @@
 }
 
 @media (hover: hover) {
-  .card:hover {
+  .sf-card-skin:hover {
     border-color: #76c4ed;
     box-shadow: 0 10px 26px #087bc424;
   }
 }
 
-.image {
+.sf-card-image-isolation {
   isolation: isolate;
 }
 
-.snow {
+.sf-card-snow {
   position: absolute;
   z-index: 1;
   inset: 0;
@@ -25,8 +25,8 @@
   pointer-events: none;
 }
 
-.snowcap,
-.snowbank {
+.sf-card-snowcap,
+.sf-card-snowbank {
   position: absolute;
   right: 0;
   left: 0;
@@ -35,18 +35,18 @@
   filter: drop-shadow(0 2px 1px #6db9e840);
 }
 
-.snowcap {
+.sf-card-snowcap {
   top: 0;
   height: clamp(16px, 2.5vw, 28px);
 }
 
-.snowbank {
+.sf-card-snowbank {
   bottom: -1px;
   height: clamp(12px, 2vw, 22px);
   filter: drop-shadow(0 -2px 2px #d7efff80);
 }
 
-.flake {
+.sf-card-flake {
   position: absolute;
   top: 19px;
   right: 14px;
@@ -56,7 +56,7 @@
   filter: drop-shadow(0 1px 2px #0862c080);
 }
 
-.smallFlake {
+.sf-card-small-flake {
   top: 43px;
   right: 35px;
   width: 12px;
@@ -65,18 +65,18 @@
 }
 
 @media (max-width: 639px) {
-  .card {
+  .sf-card-skin {
     box-shadow: 0 3px 10px #1e78bd12;
   }
 
-  .flake {
+  .sf-card-flake {
     top: 13px;
     right: 10px;
     width: 17px;
     height: 17px;
   }
 
-  .smallFlake {
+  .sf-card-small-flake {
     top: 32px;
     right: 26px;
     width: 9px;

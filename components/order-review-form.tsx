@@ -81,6 +81,13 @@ export function OrderReviewForm({ formId, review, introRef, pickupAddress, busy,
           <p>{paymentMethod === "bank_transfer" ? "Mã QR sẽ hiện sau khi bạn xác nhận đặt hàng. Bạn chuyển đúng số tiền và ghi mã đơn trong nội dung chuyển khoản nhé." : "Bạn thanh toán khi nhận hàng nhé."}</p>
         </div>
       </section>
+      <p className="border-t border-line/70 pt-3 text-xs leading-6 text-muted">
+        Trước khi đặt hàng, vui lòng đọc{" "}
+        <a href="/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="text-blue underline">điều khoản giao dịch</a>,{" "}
+        <a href="/return-refund-policy" target="_blank" rel="noopener noreferrer" className="text-blue underline">chính sách đổi trả</a> và{" "}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue underline">chính sách bảo mật</a>
+        {" "}(mở trong tab mới).
+      </p>
     </form>
   );
 }

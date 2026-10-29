@@ -51,3 +51,20 @@ export const saveLocal = (key: string, value: unknown) => {
     /* Browsing still works when storage is unavailable. */
   }
 };
+
+// Give the server-rendered screen a paint before non-critical startup work.
+// Two frames allow one actual browser render between scheduling and running.
+export function afterPaint(callback: () => void) {
+  let frame = 0;
+  const schedule = () => {
+    frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(callback);
+    });
+  };
+  if (document.readyState === "complete") schedule();
+  else window.addEventListener("load", schedule, { once: true });
+  return () => {
+    window.removeEventListener("load", schedule);
+    cancelAnimationFrame(frame);
+  };
+}

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DeliveryPolicy } from "@/components/delivery-policy";
+import { NoScriptOrdering } from "@/components/no-script-ordering";
 import {
   businessSchema,
   infoSections,
@@ -10,13 +11,19 @@ import {
   productsForPage,
   publicFallbackSettings,
   serializeJsonLd,
+  SITE_NAME,
+  SITE_TITLE,
+  SITE_DESCRIPTION,
   SITE_URL,
+  siteOpenGraph,
+  websiteSchema,
   type InfoPath,
 } from "./site-content";
 import { agentInstructions, markdownText, pageMarkdown } from "./markdown";
 import sitemap from "@/app/sitemap";
 import robots from "@/app/robots";
 import type { PublicCatalog } from "./catalog-images";
+import { policyNavigationLinks, policyPageLinks } from "./policy-links";
 
 const catalog: PublicCatalog = {
   settings: publicFallbackSettings,
@@ -53,7 +60,7 @@ test("introduction, ordering and delivery details live on the about page", () =>
     expect(home).not.toContain(`## ${heading}`);
     expect(about).toContain(`## ${heading}`);
   }
-  expect(home).toContain(`[Giới thiệu](${SITE_URL}/about)`);
+  expect(home).toContain(`[Giới thiệu & thông tin đơn vị bán hàng](${SITE_URL}/about)`);
 });
 
 test("delivery heading is sequential on the homepage and preserves the default in sheets", () => {
@@ -63,7 +70,7 @@ test("delivery heading is sequential on the homepage and preserves the default i
   expect(renderToStaticMarkup(<DeliveryPolicy />)).toContain("<h3 ");
 });
 
-test.each(["/about", "/contact", "/privacy"] as InfoPath[])(
+test.each(policyNavigationLinks.map(({ path }) => path) as InfoPath[])(
   "%s has real content and its own canonical",
   (path) => {
     expect(
@@ -95,6 +102,41 @@ test("Organization identity uses published settings with contact and PostalAddre
   expect(
     serializeJsonLd({ name: "</script><script>alert(1)</script>" }),
   ).not.toContain("<");
+});
+
+test("the canonical WebSite connects the brand and products to the business", () => {
+  const schema = websiteSchema();
+  expect(schema["@context"]).toBe("https://schema.org");
+  expect(schema["@type"]).toBe("WebSite");
+  expect(schema["@id"]).toBe(`${SITE_URL}/#website`);
+  expect(schema.url).toBe(`${SITE_URL}/`);
+  expect(schema.name).toBe(SITE_NAME);
+  expect(schema.inLanguage).toBe("vi-VN");
+  expect(schema.publisher["@id"]).toBe(businessSchema(publicFallbackSettings)["@id"]);
+  for (const content of [SITE_TITLE, SITE_DESCRIPTION, schema.description]) {
+    expect(content).toContain(SITE_NAME);
+    expect(content.toLowerCase()).toContain("sữa tuyết vân nam");
+    expect(content.toLowerCase()).toContain("bánh flan");
+  }
+  expect(siteOpenGraph.siteName).toBe(SITE_NAME);
+});
+
+test("visitors without JavaScript get useful ordering guidance and current contact details", () => {
+  const settings = { ...publicFallbackSettings, phone: "0901234567", address: "Địa chỉ thử nghiệm" };
+  const html = renderToStaticMarkup(<NoScriptOrdering settings={settings} />);
+  const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  expect(html).toStartWith("<noscript>");
+  expect(html).toContain('<h2 id="no-script-title">');
+  expect(text.length).toBeGreaterThan(1000);
+  expect(text).toContain(SITE_NAME);
+  expect(text).toContain("sữa tuyết Vân Nam");
+  expect(text).toContain(settings.address);
+  expect(html).toContain(`href="tel:${settings.phone}"`);
+  expect(text).toContain("Các nút chọn món cần JavaScript để hoạt động");
+  expect(html).toContain('href="/about"');
+  expect(html).toContain('href="/contact"');
+  const fallback = renderToStaticMarkup(<NoScriptOrdering settings={{ ...settings, phone: "" }} />);
+  expect(fallback).not.toContain('href="tel:');
 });
 
 test("Markdown reflects current product choices and escapes database text", () => {
@@ -135,6 +177,7 @@ test("sitemap covers only canonical indexable pages with real dates; robots adve
     `${SITE_URL}/banh-flan`,
     `${SITE_URL}/sua-tuyet-van-nam`,
     `${SITE_URL}/sua-tuoi`,
+    ...policyPageLinks.map(({ path }) => `${SITE_URL}${path}`),
   ]);
   for (const entry of entries)
     expect(entry.lastModified).toMatch(/^\d{4}-\d{2}-\d{2}$/);

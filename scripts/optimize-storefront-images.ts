@@ -22,10 +22,23 @@ for (const { source, prefix, widths, quality } of [
 ]) {
   const original = await readFile(join(directory, source));
   for (const width of widths) {
-    const { size } = await sharp(original)
-      .resize({ width, withoutEnlargement: true })
-      .webp({ quality, alphaQuality: 50, effort: 6 })
+    let resized = sharp(original).resize({ width, withoutEnlargement: true });
+    if (prefix === "store-logo") {
+      // Palette compression is more efficient for this small transparent mark
+      // than spending bytes on a noisy alpha channel. Preserve transparency.
+      const palette = await resized.png({ palette: true, colors: 128, dither: 0, effort: 10 }).toBuffer();
+      resized = sharp(palette);
+    }
+    const { size } = await resized
+      .webp(prefix === "store-logo" ? { lossless: true, effort: 6 } : { quality, alphaQuality: 50, effort: 6 })
       .toFile(join(directory, `${prefix}-${width}.webp`));
     console.log(`${prefix}-${width}.webp: ${(size / 1024).toFixed(1)} KiB`);
+    if (prefix === "dessert-hero") {
+      const avif = await sharp(original)
+        .resize({ width, withoutEnlargement: true })
+        .avif({ quality: 35, effort: 6 })
+        .toFile(join(directory, `${prefix}-${width}.avif`));
+      console.log(`${prefix}-${width}.avif: ${(avif.size / 1024).toFixed(1)} KiB`);
+    }
   }
 }

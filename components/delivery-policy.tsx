@@ -1,4 +1,4 @@
-import { Truck } from "lucide-react";
+import { StorefrontIcon } from "./storefront-icon";
 
 export function DeliveryPolicy({
   title = "Phí giao hàng",
@@ -14,7 +14,7 @@ export function DeliveryPolicy({
       className="rounded-xl border border-line bg-blue-light/60 px-4 py-3 landscape:py-2"
     >
       <Heading className="flex items-center gap-2 text-[13px] font-semibold text-blue">
-        <Truck size={16} aria-hidden="true" className="shrink-0" />
+        <StorefrontIcon name="truck" size={16} aria-hidden="true" className="shrink-0" />
         {title}
       </Heading>
       <dl className="mt-2 divide-y divide-line text-[13px] leading-5 landscape:mt-1 landscape:[&>div]:py-0.5">

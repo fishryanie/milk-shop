@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { policyPageLinks, type PolicyPath } from "./policy-links";
+import { policySections } from "./policies";
+import { sellerProfile, type SellerProfile } from "./seller-profile";
 import {
   defaultSettings,
   type ShopProduct,
@@ -68,7 +71,7 @@ export const productPageLinks = [
   { path: "/sua-tuoi", label: "Sữa tươi", category: "sua tuoi" },
 ] as const;
 export type ProductPagePath = (typeof productPageLinks)[number]["path"];
-export type InfoPath = "/about" | "/contact" | "/privacy" | ProductPagePath;
+export type InfoPath = "/about" | "/contact" | "/privacy" | ProductPagePath | PolicyPath;
 export type ContentSection = { heading: string; paragraphs: string[] };
 export const pageDefinitions = {
   "/banh-flan": {
@@ -97,10 +100,11 @@ export const pageDefinitions = {
       "Địa chỉ, số điện thoại và hướng dẫn liên hệ Cái Tiệm Sữa tại An Hội Đông, TP.HCM.",
   },
   "/privacy": {
-    title: "Quyền riêng tư tại Cái Tiệm Sữa",
+    title: "Chính sách bảo mật | Cái Tiệm Sữa",
     description:
       "Thông tin về dữ liệu đặt hàng, vị trí giao hàng, cookie phiên mua hàng và cách yêu cầu hỗ trợ về dữ liệu.",
   },
+  ...Object.fromEntries(policyPageLinks.map(({ path, title, description }) => [path, { title, description }])) as Record<PolicyPath, { title: string; description: string }>,
 } as const;
 
 // These dates describe actual content changes, rather than sitemap request time.
@@ -110,8 +114,9 @@ export const indexablePages = [
   "/contact",
   "/privacy",
   ...productPageLinks.map(({ path }) => path),
+  ...policyPageLinks.map(({ path }) => path),
 ] as const;
-export const CONTENT_UPDATED = "2026-10-28";
+export const CONTENT_UPDATED = "2026-10-29";
 
 export function pageMetadata(path: InfoPath): Metadata {
   const page = pageDefinitions[path];
@@ -134,7 +139,10 @@ export function pageMetadata(path: InfoPath): Metadata {
 export function infoSections(
   path: InfoPath,
   settings: ShopSettings,
+  seller: SellerProfile = sellerProfile(),
 ): ContentSection[] {
+  if (policyPageLinks.some((page) => page.path === path))
+    return policySections(path as PolicyPath, settings, seller);
   const productIntroduction: Partial<Record<InfoPath, ContentSection>> = {
     "/banh-flan": {
       heading: "Chọn bánh flan theo phần bạn thích",
@@ -171,6 +179,16 @@ export function infoSections(
     ];
   if (path === "/about")
     return [
+      {
+        heading: "Thông tin đơn vị bán hàng",
+        paragraphs: [
+          ...(seller.hasExampleData ? ["Thông tin pháp lý bên dưới có dữ liệu mẫu để minh họa và đang chờ chủ tiệm cập nhật. Không sử dụng các giá trị ghi mẫu để xuất hóa đơn hoặc xác minh đăng ký kinh doanh; số điện thoại và địa chỉ cửa hàng ở phần liên hệ là kênh hỗ trợ đang được công bố."] : []),
+          `Tên pháp lý / chủ thể kinh doanh: ${seller.legalName}.`,
+          `Số đăng ký kinh doanh: ${seller.registrationNumber}. Mã số thuế: ${seller.taxId}.`,
+          `Địa chỉ đăng ký: ${seller.registeredAddress}.`,
+          `Tên cửa hàng: ${settings.name}. Địa chỉ cửa hàng: ${settings.address}. Điện thoại: ${settings.phone}. Email hỗ trợ: ${seller.email}.`,
+        ],
+      },
       ...aboutSections,
       {
         heading: "Ghé tiệm và tìm thông tin chính thức",
@@ -194,6 +212,7 @@ export function infoSections(
         paragraphs: [
           "Khi cần kiểm tra hoặc điều chỉnh đơn, hãy cung cấp mã đơn và số điện thoại đã dùng để mua hàng. Bạn có thể tìm mã và trạng thái trong mục Đơn của tôi ở cùng trình duyệt đã đặt. Không gửi mật khẩu, mã OTP hoặc thông tin thẻ ngân hàng cho tiệm; ảnh xác nhận chuyển khoản chỉ cần thể hiện giao dịch liên quan.",
           "Nếu muốn hỏi về dữ liệu cá nhân, sửa thông tin giao hàng hoặc yêu cầu xử lý dữ liệu đã cung cấp, hãy gọi số điện thoại ở trên và nói rõ mã đơn liên quan. Tiệm cần đối chiếu thông tin để tránh cung cấp chi tiết đơn cho người khác. Đọc trang Quyền riêng tư để biết dữ liệu dùng trong quá trình mua hàng.",
+          `Email hỗ trợ: ${seller.email}.${seller.hasExampleEmail ? " Địa chỉ email mẫu không nhận thư. Vui lòng gọi số điện thoại của tiệm để được hỗ trợ." : " Bạn có thể gửi mã đơn, nội dung cần hỗ trợ và cách liên hệ lại qua email này."} Quy trình phản ánh được công bố tại trang Tiếp nhận và giải quyết khiếu nại.`,
         ],
       },
     ];
@@ -202,7 +221,8 @@ export function infoSections(
       heading: "Dữ liệu dùng để xử lý đơn",
       paragraphs: [
         "Khi đặt hàng tại Cái Tiệm Sữa, bạn cung cấp tên, số điện thoại, địa chỉ giao, món đã chọn và có thể thêm ghi chú. Nếu chọn vị trí trên bản đồ hoặc cho phép trình duyệt lấy vị trí, tọa độ được dùng để tính khoảng cách, báo phí giao và hỗ trợ giao hàng. Nếu thanh toán chuyển khoản và tải ảnh xác nhận, hệ thống lưu ảnh đó gắn với đơn để tiệm kiểm tra thanh toán. Hãy tránh ghi dữ liệu nhạy cảm không cần thiết trong ghi chú hoặc ảnh xác nhận.",
-        "Thông tin đơn được lưu trong cơ sở dữ liệu của hệ thống để chuẩn bị món, liên hệ xác nhận, giao hàng và theo dõi thanh toán. Khi tính năng thông báo đơn qua Zalo được cấu hình, mã đơn, thông tin liên hệ, địa chỉ hoặc vị trí, món và số tiền được gửi đến nhóm nhận đơn của tiệm để xử lý. Trang có bản đồ Google Maps nhúng; khi bản đồ được tải, trình duyệt kết nối đến dịch vụ Google và việc xử lý dữ liệu ở dịch vụ đó tuân theo chính sách của Google.",
+        "Thông tin đơn được lưu trong cơ sở dữ liệu của hệ thống để chuẩn bị món, liên hệ xác nhận, giao hàng và theo dõi thanh toán. Khi tính năng thông báo đơn qua Zalo được cấu hình, mã đơn, thông tin liên hệ, địa chỉ hoặc vị trí, món và số tiền được gửi đến nhóm nhận đơn của tiệm để xử lý. Nhân sự xử lý đơn, đơn vị giao hàng và nhà cung cấp hạ tầng chỉ được tiếp cận trong phạm vi cần thiết cho nhiệm vụ liên quan; tiệm không bán dữ liệu khách hàng.",
+        "Trang có bản đồ Google Maps nhúng và bản đồ OpenStreetMap khi chọn điểm nhận. Khi tải bản đồ, trình duyệt kết nối tới nhà cung cấp; dịch vụ có thể nhận thông tin kết nối và yêu cầu bản đồ theo chính sách riêng. Việc lấy vị trí GPS cần quyền trình duyệt; bạn có thể từ chối hoặc thu hồi quyền và nhập địa chỉ để tiệm xác nhận phí giao sau.",
       ],
     },
     {
@@ -213,9 +233,23 @@ export function infoSections(
       ],
     },
     {
+      heading: "Lưu trữ và bảo vệ dữ liệu",
+      paragraphs: [
+        "Dữ liệu được giữ trong thời gian cần để thực hiện đơn hàng, đối soát, xử lý phản ánh và đáp ứng nghĩa vụ lưu trữ áp dụng. Website chưa có lịch tự động xóa đơn cố định; việc đổi trạng thái đơn sang hết hạn không phải thao tác xóa dữ liệu. Tiệm xem xét yêu cầu xóa hoặc hạn chế xử lý theo từng hồ sơ và giải thích khi có thông tin cần giữ theo nghĩa vụ pháp luật.",
+        "Hệ thống giới hạn truy cập đơn theo cookie phiên đã ký, kiểm tra phiên khi truy cập ảnh thanh toán và áp dụng biện pháp kiểm soát yêu cầu. Tiệm giới hạn việc dùng thông tin cho xử lý đơn và hỗ trợ; không yêu cầu mật khẩu ngân hàng hay mã OTP. Bạn nên giữ thiết bị an toàn, không chia sẻ phiên mua hàng và báo tiệm nếu nghi có người truy cập đơn trái phép.",
+      ],
+    },
+    {
+      heading: "Quyền đối với dữ liệu cá nhân",
+      paragraphs: [
+        "Bạn có thể yêu cầu được biết, xem, cung cấp, chỉnh sửa, xóa hoặc hạn chế xử lý dữ liệu; phản đối xử lý, rút lại sự đồng ý khi việc xử lý dựa trên sự đồng ý; gửi khiếu nại hoặc yêu cầu bảo vệ quyền lợi theo pháp luật. Việc thu hồi quyền vị trí hoặc xóa dữ liệu trên thiết bị không tự xóa dữ liệu đơn tại tiệm.",
+        "Tiệm đối chiếu thông tin phù hợp để xác minh người yêu cầu, thông báo phạm vi, kết quả hoặc lý do chưa thể thực hiện và xử lý trong thời hạn pháp luật áp dụng. Việc rút lại sự đồng ý có thể ảnh hưởng khả năng tiếp tục phục vụ đơn khi thiếu thông tin cần thiết, nhưng không làm mất quyền phản ánh của bạn.",
+      ],
+    },
+    {
       heading: "Liên hệ về dữ liệu",
       paragraphs: [
-        `Để hỏi về thông tin cá nhân, yêu cầu sửa dữ liệu hoặc đề nghị xóa dữ liệu liên quan đến đơn, gọi ${settings.phone} hoặc liên hệ tiệm tại ${settings.address}. Nêu mã đơn và thông tin cần xử lý để tiệm kiểm tra danh tính và phạm vi yêu cầu. Tiệm cần xem xét các thông tin cần giữ cho việc xử lý đơn, thanh toán và nghĩa vụ áp dụng trước khi phản hồi yêu cầu. Trang này mô tả cách website hiện vận hành; ngày cập nhật nội dung: 28/10/2026.`,
+        `Đơn vị chịu trách nhiệm xử lý dữ liệu là đơn vị bán hàng tại trang Giới thiệu. Để hỏi về thông tin cá nhân hoặc gửi yêu cầu liên quan đến đơn, gọi ${settings.phone} hoặc liên hệ tiệm tại ${settings.address}. Nêu mã đơn và thông tin cần xử lý để tiệm kiểm tra danh tính và phạm vi yêu cầu. Email hỗ trợ: ${seller.email}${seller.hasExampleEmail ? " (địa chỉ mẫu không nhận thư; vui lòng gọi điện)" : ""}. Xem thêm Chính sách cookie và quy trình giải quyết khiếu nại ở liên kết cuối trang. Ngày cập nhật nội dung: 29/10/2026.`,
       ],
     },
   ];
@@ -294,6 +328,20 @@ export function businessSchema(settings: ShopSettings) {
     hasMenu: `${SITE_URL}/#menu`,
     hasMap:
       "https://www.google.com/maps/search/?api=1&query=10.852523902605594%2C106.66730207366463",
+  };
+}
+
+// Google uses WebSite on the canonical homepage to identify the site's name.
+export function websiteSchema() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${SITE_URL}/#website`,
+    url: `${SITE_URL}/`,
+    name: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    inLanguage: "vi-VN",
+    publisher: { "@id": `${SITE_URL}/#organization` },
   };
 }
 

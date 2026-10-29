@@ -12,7 +12,7 @@ function secret() {
 }
 const sign = (token: string) =>
   createHmac("sha256", secret()).update(token).digest("hex");
-export async function session(create = false) {
+export async function currentSession(): Promise<string | null> {
   const jar = await cookies();
   const value = jar.get("milk_guest")?.value || "";
   const [token, signature] = value.split(".");
@@ -24,12 +24,18 @@ export async function session(create = false) {
     timingSafeEqual(Buffer.from(signature), Buffer.from(sign(token)))
   )
     return token;
+  return null;
+}
+export async function session(create = false) {
+  const token = await currentSession();
+  if (token) return token;
   if (!create)
     throw new CommerceError(
       "Phiên mua hàng đã hết hạn. Vui lòng tải lại trang.",
       401,
     );
   const next = randomBytes(32).toString("hex");
+  const jar = await cookies();
   jar.set("milk_guest", `${next}.${sign(next)}`, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

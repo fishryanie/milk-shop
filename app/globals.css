@@ -1,8 +1,16 @@
 @import "tailwindcss";
+@import "../components/storefront-utilities.css";
+@import "../components/storefront-intro.css";
+@import "../components/product-card.css";
+@import "../public/fonts/fallbacks.css";
 
 @theme inline {
-  --font-sans: var(--font-be-vietnam), system-ui, sans-serif;
-  --font-serif: var(--font-dm-serif), Georgia, serif;
+  --font-sans: "Be Vietnam Full", var(--font-sans-render, var(--font-sans-initial)), system-ui, sans-serif;
+  --font-serif: "DM Serif Full", var(--font-dm-serif), Georgia, serif;
+}
+
+.sf-fonts-ready {
+  --font-sans-render: var(--font-be-vietnam);
 }
 
 @theme {

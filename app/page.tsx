@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
+import { preload } from "react-dom";
 import { Storefront } from "@/components/storefront";
 import { pageCatalog } from "@/lib/catalog";
-import { businessSchema, serializeJsonLd, SITE_URL } from "@/lib/site-content";
+import { storefrontAvifImage } from "@/lib/storefront-image";
+import {
+  businessSchema,
+  serializeJsonLd,
+  SITE_URL,
+  websiteSchema,
+} from "@/lib/site-content";
 
 // Refresh the prerendered menu without putting database latency on every page view.
 export const revalidate = 15;
@@ -14,6 +21,13 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
+  preload(storefrontAvifImage.src, {
+    as: "image",
+    type: "image/avif",
+    imageSrcSet: storefrontAvifImage.srcSet,
+    imageSizes: storefrontAvifImage.sizes,
+    fetchPriority: "high",
+  });
   const initialCatalog = await pageCatalog();
   return (
     <>
@@ -22,6 +36,10 @@ export default async function Page() {
         dangerouslySetInnerHTML={{
           __html: serializeJsonLd(businessSchema(initialCatalog.settings)),
         }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(websiteSchema()) }}
       />
       <Storefront initialCatalog={initialCatalog} />
     </>

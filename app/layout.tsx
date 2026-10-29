@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { StorefrontFonts } from "@/components/storefront-fonts";
 import {
   SITE_DESCRIPTION,
   SITE_TITLE,
@@ -9,14 +10,15 @@ import {
 
 const sans = localFont({
   src: [
-    { path: "../public/fonts/be-vietnam-regular.woff2", weight: "400" },
-    { path: "../public/fonts/be-vietnam-semibold.woff2", weight: "600 800" },
+    { path: "../public/fonts/be-vietnam-regular-optimized.woff2", weight: "400" },
+    { path: "../public/fonts/be-vietnam-semibold-optimized.woff2", weight: "600 800" },
   ],
   variable: "--font-be-vietnam",
   display: "swap",
+  preload: false,
 });
 const serif = localFont({
-  src: "../public/fonts/dm-serif.woff2",
+  src: "../public/fonts/dm-serif-optimized.woff2",
   weight: "400",
   variable: "--font-dm-serif",
   display: "swap",
@@ -31,11 +33,6 @@ export const metadata: Metadata = {
   openGraph: siteOpenGraph,
   icons: {
     icon: [
-      {
-        url: "/icons/icon-192.png?v=milk-logo",
-        sizes: "192x192",
-        type: "image/png",
-      },
       {
         url: "/icons/favicon-32.png?v=milk-logo",
         sizes: "32x32",
@@ -56,9 +53,6 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = {
   initialScale: 1,
-  maximumScale: 1,
-  minimumScale: 1,
-  userScalable: false,
   themeColor: "#f5faff",
   colorScheme: "light",
   viewportFit: "cover",
@@ -74,13 +68,15 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${sans.variable} ${serif.variable} scroll-smooth scroll-pt-[110px] bg-paper [-webkit-text-size-adjust:100%] [text-size-adjust:100%] motion-reduce:scroll-auto mobile:scroll-pt-[calc(86px+env(safe-area-inset-top,0px))]`}
+      className={`${sans.variable} ${serif.variable} sf-root`}
+      style={{ "--font-sans-initial": sans.style.fontFamily.split(",").slice(1).join(",") || "system-ui" } as React.CSSProperties}
       suppressHydrationWarning
     >
       <body
-        className="m-0 min-h-dvh bg-paper font-sans text-sm text-ink antialiased selection:bg-ice [&_:is(button,a,input,textarea)]:focus-visible:outline-3 [&_:is(button,a,input,textarea)]:focus-visible:outline-sky [&_:is(button,a,input,textarea)]:focus-visible:outline-offset-4 [&_main]:overflow-clip mobile:text-[15px] mobile:before:fixed mobile:before:inset-x-0 mobile:before:top-0 mobile:before:z-21 mobile:before:h-[env(safe-area-inset-top,0px)] mobile:before:bg-paper mobile:before:content-[''] mobile:before:pointer-events-none mobile:[&_main]:pr-[env(safe-area-inset-right,0px)] mobile:[&_main]:pl-[env(safe-area-inset-left,0px)] touch:[&_input:not([type=checkbox]):not([type=radio])]:text-[max(16px,1em)] touch:[&_textarea]:text-[max(16px,1em)] touch:[&_select]:text-[max(16px,1em)] motion-reduce:[&_*]:animate-none! motion-reduce:[&_*]:transition-none! motion-reduce:[&_*::before]:animate-none! motion-reduce:[&_*::before]:transition-none! motion-reduce:[&_*::after]:animate-none! motion-reduce:[&_*::after]:transition-none!"
+        className="sf-body"
         suppressHydrationWarning
       >
+        <StorefrontFonts family={sans.style.fontFamily.split(",")[0]} />
         {children}
       </body>
     </html>

@@ -159,18 +159,20 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
   maximumFractionDigits: 0,
 });
 export const money = (value: number) => currencyFormatter.format(value);
-const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
-  timeZone: "Asia/Ho_Chi_Minh",
-});
-const clockFormatter = new Intl.DateTimeFormat("vi-VN", {
-  timeZone: "Asia/Ho_Chi_Minh",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+// Dates are only needed in order details; avoid initializing ICU formatters
+// while the storefront's first screen is hydrating.
+let dateFormatter: Intl.DateTimeFormat | undefined;
+let clockFormatter: Intl.DateTimeFormat | undefined;
 export const formatDate = (value: string) =>
-  dateFormatter.format(new Date(value));
+  (dateFormatter ??= new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+  })).format(new Date(value));
 export const formatClock = (value: string) =>
-  clockFormatter.format(new Date(value));
+  (clockFormatter ??= new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+  })).format(new Date(value));
 export const formatStamp = (value: string) =>
   `${formatDate(value)} ${formatClock(value)}`;
 export const cartKey = (line: CartLine) =>

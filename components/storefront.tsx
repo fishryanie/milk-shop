@@ -1,7 +1,6 @@
 "use client";
 import { Button } from "./button";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -9,27 +8,8 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  ArrowDown,
-  ArrowRight,
-  ArrowUpRight,
-  Check,
-  Clock3,
-  Droplet,
-  Heart,
-  HelpCircle,
-  Leaf,
-  MapPin,
-  Milk,
-  Phone,
-  Plus,
-  ShoppingBag,
-  Sparkles,
-  Truck,
-  ShoppingCartPlus,
-  Snowflake,
-} from "lucide-react";
-import { api, readSaved, saveLocal } from "@/lib/client";
+import { StorefrontIcon } from "./storefront-icon";
+import { afterPaint, api, readSaved, saveLocal } from "@/lib/client";
 import {
   cartKey,
   money,
@@ -39,9 +19,7 @@ import {
   type ShopSettings,
 } from "@/shared/commerce/types";
 import { ProductImage } from "./product-image";
-import { storefrontImage, storefrontLogo } from "@/lib/storefront-image";
-import introStyles from "./storefront-intro.module.css";
-import cardStyles from "./product-card.module.css";
+import { storefrontAvifImage, storefrontImage, storefrontLogo } from "@/lib/storefront-image";
 import { DeliveryPolicy } from "./delivery-policy";
 import { FloatingFooter } from "./floating-footer";
 import { FeedbackToast } from "./feedback-toast";
@@ -49,12 +27,14 @@ import { animateCartAddition } from "@/lib/cart-motion";
 import { useCartQuote } from "@/lib/use-cart-quote";
 import { StoreMap } from "./store-map";
 import { productPageLinks, publicFallbackSettings } from "@/lib/site-content";
+import { NoScriptOrdering } from "./no-script-ordering";
+import { PolicyLinks } from "./policy-links";
 
 function SheetLoading() {
   return (
     <div
       role="status"
-      className="fixed bottom-[calc(24px+env(safe-area-inset-bottom,0px))] left-1/2 z-100 -translate-x-1/2 rounded-lg bg-ink px-5 py-3 text-sm text-white shadow-lg"
+      className="sf-sheet-loading"
     >
       Đang mở…
     </div>
@@ -117,7 +97,7 @@ export function Storefront({
   const loadCatalog = useCallback(async () => {
     try {
       const data = await api<Catalog>("/api/catalog");
-      setCatalog(data);
+      setCatalog((current) => JSON.stringify(current) === JSON.stringify(data) ? current : data);
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Tiệm chưa kết nối được.");
@@ -128,7 +108,7 @@ export function Storefront({
   useEffect(() => {
     void loadCatalog();
     const saved = readSaved<CartLine[]>("milk-cart", []);
-    if (Array.isArray(saved))
+    if (Array.isArray(saved) && saved.length)
       setCart(
         saved
           .filter(
@@ -146,8 +126,12 @@ export function Storefront({
           )
           .slice(0, 30),
       );
-    setHydrated(true);
+    const cancelStartup = afterPaint(() => {
+      setHydrated(true);
+      setTourSeen(readSaved<boolean>("milk-tour-seen", false));
+    });
     return () => {
+      cancelStartup();
       clearTimeout(toastTimer.current);
     };
   }, [loadCatalog]);
@@ -163,7 +147,7 @@ export function Storefront({
         // Keep the last known count when the connection is unavailable.
       }
     };
-    void refreshOrderCount();
+    const cancelInitialRefresh = afterPaint(() => void refreshOrderCount());
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") void refreshOrderCount();
     };
@@ -172,6 +156,7 @@ export function Storefront({
     window.addEventListener("focus", refreshWhenVisible);
     return () => {
       cancelled = true;
+      cancelInitialRefresh();
       clearInterval(interval);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
       window.removeEventListener("focus", refreshWhenVisible);
@@ -180,9 +165,6 @@ export function Storefront({
   useEffect(() => {
     if (hydrated) saveLocal("milk-cart", cart);
   }, [cart, hydrated]);
-  useEffect(() => {
-    setTourSeen(readSaved<boolean>("milk-tour-seen", false));
-  }, []);
   const settings = catalog.settings;
   const products = catalog.products;
   const address =
@@ -274,16 +256,16 @@ export function Storefront({
     hydrated && !loading && !error && !modal && !selected && !tourSeen;
   return (
     <>
-      <div className="flex h-8 items-center justify-between bg-blue-light px-[max(5.5vw,24px)] text-[10px] tracking-[.5px] text-blue-dark [&>span:last-child]:flex [&>span:last-child]:items-center [&>span:last-child]:gap-[7px] mobile:h-[calc(27px+env(safe-area-inset-top,0px))] mobile:justify-center mobile:pt-[env(safe-area-inset-top,0px)] mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:tracking-[.1px] mobile:[&>span:last-child]:hidden">
+      <div className="sf-announcement">
         <span>Đặt hàng ngay, giao đến tận tay.</span>
         <span>
-          <Heart size={12} /> Từ căn bếp nhỏ của tiệm
+          <StorefrontIcon name="heart" size={12} /> Từ căn bếp nhỏ của tiệm
         </span>
       </div>
-      <header className="sticky top-0 z-20 flex h-20 items-center justify-between gap-8 border-b border-line bg-paper/95 px-[5.5vw] backdrop-blur-[18px] [&_nav]:flex [&_nav]:items-center [&_nav]:gap-[31px] [&_nav]:text-xs [&_nav_a]:flex [&_nav_a]:min-h-11 [&_nav_a]:items-center [&_nav_a]:gap-1.5 [&_nav_button]:min-h-11 [&_nav_button]:p-0 wide:px-[max(5.5vw,calc((100vw-1280px)/2))] tablet:[&_nav]:gap-[23px] mobile:top-[env(safe-area-inset-top,0px)] mobile:h-15 mobile:gap-3 mobile:pr-[max(12px,env(safe-area-inset-right,0px))] mobile:pl-[max(12px,env(safe-area-inset-left,0px))] mobile:[&_nav]:hidden">
+      <header className="sf-header">
         <a
           href="#"
-          className="block w-[228px] shrink-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue mobile:w-[174px] tiny:w-[156px]"
+          className="sf-logo"
           aria-label={`${settings.name} — Trang chủ`}
         >
           <img
@@ -296,7 +278,7 @@ export function Storefront({
         </a>
         <nav aria-label="Điều hướng chính">
           <a
-            className="relative text-blue after:absolute after:bottom-px after:left-0 after:h-0.5 after:w-[18px] after:bg-blue after:content-['']"
+            className="sf-menu-link"
             href="#menu"
           >
             Thực đơn
@@ -308,28 +290,28 @@ export function Storefront({
             Liên hệ & Bản đồ
           </a>
           <button
-            className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-ink"
+            className="sf-orders-button"
             onClick={() => {
               setNewOrder(undefined);
               setModal("orders");
             }}
           >
-            Đơn của tôi <ArrowUpRight size={15} />
+            Đơn của tôi <StorefrontIcon name="arrow-up-right" size={15} />
           </button>
           <button
-            className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px inline-flex h-10 min-h-10 items-center px-2.5 text-muted tablet:hidden!"
+            className="sf-tour-button"
             onClick={() => setModal("tour")}
           >
             Ghé tiệm lần đầu?
           </button>
         </nav>
         <button
-          className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative flex h-10 min-h-10 items-center gap-2.5 border border-blue/25 px-3 text-xs font-semibold hover:border-blue/50 [&_b]:grid [&_b]:h-5 [&_b]:min-w-5 [&_b]:place-items-center [&_b]:rounded-full [&_b]:bg-blue [&_b]:text-[10px] [&_b]:text-white enabled:active:scale-[.96] enabled:active:translate-y-px enabled:active:border-blue enabled:active:bg-blue-light mobile:min-w-[52px] mobile:shrink-0 mobile:gap-1.5 mobile:px-2.5 mobile:[&>span]:hidden mobile:[&_b]:text-[11px]"
+          className="sf-cart-button"
           onClick={() => setModal("cart")}
           data-cart-target
           aria-label={`Mở giỏ hàng, ${count} món`}
         >
-          <ShoppingBag size={19} />
+          <StorefrontIcon name="shopping-bag" size={19} />
           <span>Giỏ hàng</span>
           <b key={count} className="cart-count">
             {count}
@@ -338,11 +320,11 @@ export function Storefront({
       </header>
       <main>
         <section
-          className={`${introStyles.intro} mx-auto grid max-w-[1440px] grid-cols-2 items-center gap-[45px] px-[5.5vw] pt-[58px] pb-[54px] [&_h1]:max-w-[550px] [&_h1]:font-serif [&_h1]:text-[clamp(43px,4.8vw,69px)] [&_h1]:leading-[1.16] [&_h1]:font-normal [&_h1]:tracking-[-2.2px] [&_em]:inline [&_em]:font-normal [&_em]:text-blue [&_em]:not-italic tablet:gap-[30px] tablet:pt-10 tablet:[&_h1]:text-[51px] mobile:grid-cols-[minmax(0,1fr)_minmax(105px,.67fr)] mobile:gap-4 mobile:px-3 mobile:pt-[22px] mobile:pb-6 mobile:[&_h1]:text-[clamp(28px,7.5vw,42px)] mobile:[&_h1]:leading-[1.13] mobile:[&_h1]:tracking-[-.9px] tiny:grid-cols-[minmax(0,1fr)_105px] tiny:gap-3 tiny:[&_h1]:text-[27px]`}
+          className="sf-intro"
         >
-          <div className="pt-1.5 pb-4 [&>p]:mt-6 [&>p]:mb-[26px] [&>p]:max-w-[360px] [&>p]:text-xs [&>p]:leading-[1.95] [&>p]:text-muted mobile:min-w-0 mobile:p-0 mobile:[&>p]:hidden">
+          <div className="sf-intro-copy">
             <div
-              className={`${introStyles.status} mb-[25px] flex items-center gap-2 text-[10px] tracking-[.25px] text-muted mobile:mb-3 mobile:gap-[7px] mobile:text-[11px] mobile:[&>span:last-child]:hidden`}
+              className="sf-status"
             >
               <span
                 className={`size-1.5 rounded-full bg-[#639775] shadow-[0_0_0_3px_#63977512] ${settings.isOpen ? "" : "bg-[#ad795c]!"}`}
@@ -354,7 +336,7 @@ export function Storefront({
               <span>Nhà làm, mỗi ngày</span>
             </div>
             <h1>
-              <span className="sr-only">Cái Tiệm Sữa — Sữa tuyết, sữa tươi và bánh flan. </span>
+              <span className="sr-only">Cái Tiệm Sữa — Sữa tuyết Vân Nam, sữa tươi và bánh flan. </span>
               Món ngon từ sữa,
               <br />
               tiệm nấu mới <em>mỗi ngày.</em>
@@ -362,7 +344,7 @@ export function Storefront({
 
             <p>{settings.description}</p>
             <a
-              className={`${introStyles.cta} relative inline-flex h-10 min-h-10 items-center justify-center gap-2 overflow-hidden rounded-button px-4 text-[13px] font-semibold select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 active:translate-y-px active:scale-[.96] mobile:[&>svg]:shrink-0 bg-brand text-white hover:-translate-y-px hover:brightness-95 active:translate-y-[1.5px] active:brightness-[.94] active:shadow-[inset_0_1px_4px_#014ba659] gap-3 px-[18px] mobile:mt-[18px] mobile:gap-2 mobile:px-3.5 mobile:[&_svg]:w-4 mobile:[&_svg]:shrink-0 tiny:px-2.5 tiny:text-[11px]`}
+              className="sf-cta"
               href="#menu"
               onClick={(e) => {
                 const target = document.getElementById("menu");
@@ -395,11 +377,11 @@ export function Storefront({
                 window.history.pushState(null, "", "#menu");
               }}
             >
-              Chọn món ngay <ArrowDown size={17} />
+              Chọn món ngay <StorefrontIcon name="arrow-down" size={17} />
             </a>
-            <div className="mt-7 flex items-center gap-2.5 text-[9px] leading-[1.9] text-muted [&_b]:font-normal [&_b]:text-ink mobile:hidden">
+            <div className="sf-welcome">
               <span className="grid size-[31px] place-items-center rounded-full bg-blue-light text-blue">
-                <Heart size={18} strokeWidth={1.4} />
+                <StorefrontIcon name="heart" size={18} strokeWidth={1.4} />
               </span>
               <span>
                 Chẳng cần đăng ký.
@@ -409,34 +391,37 @@ export function Storefront({
             </div>
           </div>
           <div
-            className={`${introStyles.visual} relative min-w-0 pr-[13px] tablet:p-0`}
+            className={`sf-intro-visual relative min-w-0 pr-[13px] tablet:p-0`}
           >
-            <Sparkles
-              className={introStyles.sparkle}
+            <StorefrontIcon name="sparkles"
+              className="sf-intro-sparkle"
               strokeWidth={1.1}
               aria-hidden="true"
             />
-            <img
-              {...storefrontImage}
-              className="mx-auto h-[408px] w-full max-w-[447px] object-contain tablet:h-[360px] tablet:max-w-[394px] mobile:h-[205px] mobile:max-w-none tiny:h-[190px]"
-              width={1280}
-              height={1170}
-              alt="Sữa tuyết Oreo và bánh flan caramel"
-              loading="eager"
-              decoding="async"
-              fetchPriority="high"
-            />
-            <div className="absolute right-[-5px] bottom-[41px] flex h-[140px] w-[122px] rotate-[7deg] flex-col justify-between bg-ice px-[13px] py-[18px] text-blue-dark shadow-[0_5px_16px_#014ba614] [&_span]:text-[8px] [&_span]:tracking-[2px] [&_span]:uppercase [&_b]:font-serif [&_b]:text-[22px] [&_b]:leading-[1.15] [&_b]:font-normal [&_svg]:self-end tablet:right-[-7px] tablet:h-[125px] tablet:w-[105px] tablet:[&_b]:text-[19px] mobile:hidden">
+            <picture className="contents">
+              <source type="image/avif" srcSet={storefrontAvifImage.srcSet} sizes={storefrontAvifImage.sizes} />
+              <img
+                {...storefrontImage}
+                className="sf-hero-image"
+                width={1280}
+                height={1170}
+                alt="Sữa tuyết Oreo và bánh flan caramel"
+                loading="eager"
+                decoding="sync"
+                fetchPriority="high"
+              />
+            </picture>
+            <div className="sf-hero-note">
               <span>tươi ngon</span>
               <b>
                 từ những điều
                 <br />
                 nhỏ xíu.
               </b>
-              <Heart size={17} />
+              <StorefrontIcon name="heart" size={17} />
             </div>
             <div
-              className={`${introStyles.caption} mt-4 flex items-center justify-center gap-2.5 text-[8px] tracking-[1.2px] text-muted [&_i]:block [&_i]:h-px [&_i]:w-[27px] [&_i]:bg-blue/30 mobile:mt-2.5 mobile:gap-1.5 mobile:text-[9px] mobile:tracking-[.2px] mobile:[&>span]:hidden mobile:[&_i]:w-[18px]`}
+              className="sf-caption"
             >
               <span>MADE WITH A LITTLE LOVE</span>
               <i />
@@ -444,50 +429,51 @@ export function Storefront({
             </div>
           </div>
         </section>
-        <div className="flex justify-around gap-6 border-y border-line bg-blue-light/60 px-[8vw] py-[21px] text-muted [&>span]:flex [&>span]:items-center [&>span]:gap-2.5 [&>span]:text-[10px] [&_svg]:text-blue mobile:justify-between mobile:gap-3 mobile:px-3 mobile:py-3.5 mobile:[&>span]:gap-1.5 mobile:[&>span]:leading-[1.4] mobile:[&>span:last-child]:hidden mobile:[&_svg]:w-[17px] mobile:[&_svg]:shrink-0 tiny:[&>span]:gap-1 tiny:[&>span]:text-[9px] tiny:[&_svg]:w-[15px]">
+        <NoScriptOrdering settings={settings} />
+        <div className="sf-benefits">
           <span>
-            <Milk size={20} strokeWidth={1.35} />
+            <StorefrontIcon name="milk" size={20} strokeWidth={1.35} />
             Ít ngọt, béo thơm
           </span>
           <span>
-            <Leaf size={20} strokeWidth={1.35} />
+            <StorefrontIcon name="leaf" size={20} strokeWidth={1.35} />
             Làm mới mỗi ngày
           </span>
           <span>
-            <Truck size={20} strokeWidth={1.35} />
+            <StorefrontIcon name="truck" size={20} strokeWidth={1.35} />
             Miễn phí giao hàng
           </span>
           <span>
-            <Heart size={20} strokeWidth={1.35} />
+            <StorefrontIcon name="heart" size={20} strokeWidth={1.35} />
             Làm bằng cả thương yêu
           </span>
         </div>
         <section
-          className="mx-auto max-w-[1440px] px-[5.5vw] pt-[62px] pb-[70px] mobile:overflow-visible mobile:px-3 mobile:pt-[30px] mobile:pb-[38px]"
+          className="sf-menu"
           id="menu"
         >
-          <div className="mb-[30px] flex items-center justify-between [&>div>p:last-child]:mt-[11px] [&>div>p:last-child]:text-[11px] [&>div>p:last-child]:leading-[1.7] [&>div>p:last-child]:text-muted mobile:mb-[18px] mobile:items-start mobile:[&>div>p:last-child]:mt-2.5 mobile:[&>div>p:last-child]:text-xs mobile:[&>div>p:last-child]:leading-[1.6]">
+          <div className="sf-menu-heading">
             <div>
-              <p className="mb-2.5 text-[9px] font-semibold tracking-[2px] text-blue uppercase mobile:mb-2 mobile:text-[10px] mobile:tracking-[1.4px]">
+              <p className="sf-eyebrow">
                 MENU TẠI TIỆM
               </p>
-              <h2 className="font-serif text-[37px] leading-[1.2] font-normal tracking-[-.7px] mobile:text-[31px]">
+              <h2 className="sf-menu-title">
                 Món ngon, bạn chọn.
               </h2>
               <p>Một món quen, hay một chút mới cho hôm nay?</p>
             </div>
-            <span className="rotate-[-7deg] pr-1.5 font-serif text-xl text-blue/70 italic tablet:text-lg mobile:hidden">
+            <span className="sf-menu-note">
               ngon hơn khi có bạn ♡
             </span>
           </div>
           {error && (
             <div
-              className="my-3.5 flex items-start gap-2.5 rounded-[5px] px-[17px] py-[15px] text-[11px] leading-[1.8] [&_svg]:mt-0.5 [&_svg]:shrink-0 [&_button]:ml-auto [&_button]:p-0 [&_button]:text-[10px] [&_button]:font-semibold [&_button]:whitespace-nowrap [&_button]:underline mobile:p-3.5 mobile:text-[13px] mobile:leading-[1.75] mobile:[&_button]:h-10 mobile:[&_button]:min-h-10 mobile:[&_button]:text-xs bg-[#fbede8] text-[#9f4a3b]"
+              className="sf-error"
               role="alert"
             >
               <span>{error}</span>
               <button
-                className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-10 px-3 font-medium text-xs border border-line bg-white hover:bg-blue-light"
+                className="sf-retry"
                 onClick={() => void loadCatalog()}
               >
                 Thử lại
@@ -496,23 +482,23 @@ export function Storefront({
           )}
           {loading ? (
             <div
-              className="grid grid-cols-3 gap-6 tablet:gap-5 mobile:grid-cols-2 mobile:gap-3 tiny:gap-2.5"
+              className="sf-skeleton-grid"
               aria-label="Đang tải thực đơn"
             >
               {[1, 2, 3, 4, 5, 6].map((n) => (
                 <div
-                  className={`${cardStyles.card} animate-skeleton min-w-0 flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl p-2.5 sm:p-4`}
+                  className={`sf-card-skin sf-card-skeleton`}
                   key={n}
                 >
                   <div>
-                    <div className="-mx-2.5 -mt-2.5 aspect-square w-[calc(100%+1.25rem)] bg-line/70 sm:-mx-4 sm:-mt-4 sm:w-[calc(100%+2rem)]" />
+                    <div className="sf-skeleton-image" />
                     <div className="mt-2.5 sm:mt-3.5 flex items-center justify-between">
                       <span className="h-3 w-12 sm:w-16 rounded bg-line/70" />
                     </div>
                     <span className="mt-2 block h-4 sm:h-5 w-3/4 rounded bg-line/70" />
                     <span className="mt-1.5 block h-3 sm:h-3.5 w-full rounded bg-line/70" />
                   </div>
-                  <div className="mt-2.5 sm:mt-4 flex items-center justify-between border-t border-line/60 pt-2 sm:pt-3">
+                  <div className="sf-skeleton-price">
                     <span className="h-4 sm:h-5 w-14 sm:w-20 rounded bg-line/70" />
                     <span className="size-8 sm:size-9 rounded-full bg-line/70" />
                   </div>
@@ -520,13 +506,13 @@ export function Storefront({
               ))}
             </div>
           ) : !products.length ? (
-            <div className="flex min-h-[280px] flex-col items-center justify-center gap-[17px] px-5 py-10 text-center [&_svg]:text-sky [&_h3]:font-serif [&_h3]:text-[27px] [&_p]:max-w-[350px] [&_p]:text-xs [&_p]:leading-[1.8] [&_p]:text-muted mobile:min-h-[260px] mobile:gap-4 mobile:py-[30px] mobile:[&_h3]:leading-[1.3] mobile:[&_p]:text-sm">
-              <Milk size={44} strokeWidth={1} />
+            <div className="sf-empty-menu">
+              <StorefrontIcon name="milk" size={44} strokeWidth={1} />
               <h3>Tiệm đang chuẩn bị menu mới</h3>
               <p>Bạn ghé lại tiệm một chút nữa nhé.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-6 tablet:gap-5 mobile:grid-cols-2 mobile:gap-2 tiny:gap-2.5">
+            <div className="sf-product-grid">
               {products.map((p, index) => {
                 const available = p.status === "available" && p.stock !== 0;
                 const inCart = countsByProduct.get(p.id) || 0;
@@ -541,36 +527,32 @@ export function Storefront({
                   <article
                     key={p.id}
                     id={`mon-${p.id}`}
-                    className={`${cardStyles.card} group relative min-w-0 flex flex-col justify-between overflow-hidden rounded-xl sm:rounded-2xl p-2.5 sm:p-4 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 select-none outline-none [-webkit-tap-highlight-color:transparent]`}
+                    className={`sf-card-skin group sf-product-card`}
                   >
                     {/* Ảnh sản phẩm & Badge */}
                     <button
                       type="button"
                       onClick={() => setSelected(p)}
                       aria-label={`Xem món ${p.name}`}
-                      className={`${cardStyles.image} relative -mx-2.5 -mt-2.5 aspect-square w-[calc(100%+1.25rem)] shrink-0 overflow-hidden bg-blue-light/50 block text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer touch-manipulation sm:-mx-4 sm:-mt-4 sm:w-[calc(100%+2rem)]`}
+                      className={`sf-card-image-isolation sf-product-image`}
                     >
                       <ProductImage
                         product={p}
-                        eager={index < 2}
+                        eager={index === 0}
                         className="h-full w-full object-cover"
                       />
 
-                      <span className={cardStyles.snow} aria-hidden="true">
-                        <svg className={cardStyles.snowcap} viewBox="0 0 400 32" preserveAspectRatio="none" fill="currentColor">
-                          <path d="M0 0H400V10C389 6 382 12 374 10C368 9 372 23 364 23C356 23 362 10 351 11C332 14 325 7 308 9C286 12 278 7 262 9C254 10 259 19 252 19C244 19 249 9 238 10C218 12 212 7 194 9C171 12 159 6 139 9C130 10 134 24 126 24C118 24 123 10 112 11C93 13 82 8 64 10C51 12 44 7 33 10C25 13 28 19 21 19C14 18 19 10 11 9C6 9 3 11 0 11Z" />
-                        </svg>
-                        <svg className={cardStyles.snowbank} viewBox="0 0 400 30" preserveAspectRatio="none" fill="currentColor">
-                          <path d="M0 15c14-1 20-9 34-7 15 2 19 10 38 8 20-2 23-7 43-5 19 2 24 10 46 8 21-2 30-6 48-4 25 3 36 7 60 2 20-4 28-8 48-5 19 3 25 5 41 1 17-4 28-4 42 1v16H0Z" />
-                        </svg>
-                        <Snowflake className={cardStyles.flake} strokeWidth={1.7} />
-                        <Snowflake className={`${cardStyles.flake} ${cardStyles.smallFlake}`} strokeWidth={1.6} />
+                      <span className="sf-card-snow" aria-hidden="true">
+                        <StorefrontIcon name="snowcap" className="sf-card-snowcap" viewBox="0 0 400 32" preserveAspectRatio="none" fill="currentColor" stroke="none" />
+                        <StorefrontIcon name="snowbank" className="sf-card-snowbank" viewBox="0 0 400 30" preserveAspectRatio="none" fill="currentColor" stroke="none" />
+                        <StorefrontIcon name="snowflake" className="sf-card-flake" strokeWidth={1.7} />
+                        <StorefrontIcon name="snowflake" className={`sf-card-flake sf-card-small-flake`} strokeWidth={1.6} />
                       </span>
 
                       {/* Huy hiệu món nổi bật / badge */}
                       {p.badge && (
                         <span
-                          className={`absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5 z-10 rounded-full px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[11px] font-semibold tracking-wide shadow-xs backdrop-blur-md ${
+                          className={`sf-badge ${
                             [
                               "bg-[#faf6e8]/95 text-[#7d6d42] border border-[#e8dcb8]",
                               "bg-[#edf3e9]/95 text-[#476a4a] border border-[#cfe2cc]",
@@ -584,8 +566,8 @@ export function Storefront({
 
                       {/* Số lượng đã có trong giỏ hàng */}
                       {inCart > 0 && (
-                        <span className="absolute right-1.5 bottom-1.5 sm:right-2.5 sm:bottom-2.5 z-10 flex items-center gap-1 rounded-full bg-blue px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[11px] font-semibold text-white shadow-md backdrop-blur-xs animate-fade-in">
-                          <Check size={11} strokeWidth={2.5} />
+                        <span className="sf-in-cart">
+                          <StorefrontIcon name="check" size={11} strokeWidth={2.5} />
                           <span>{inCart}</span>
                           <span className="hidden sm:inline"> trong giỏ</span>
                         </span>
@@ -599,22 +581,22 @@ export function Storefront({
                         <button
                           type="button"
                           onClick={() => setSelected(p)}
-                          className="rounded-button block w-full text-left outline-none focus:outline-none [-webkit-tap-highlight-color:transparent] cursor-pointer"
+                          className="sf-product-link"
                         >
-                          <h3 className="font-serif text-[15px] sm:text-[20px] font-normal leading-[1.25] sm:leading-[1.3] text-ink transition-colors duration-200 group-hover:text-blue line-clamp-1 break-words">
+                          <h3 className="sf-product-name">
                             {p.name}
                           </h3>
                         </button>
 
                         {/* Mô tả ngắn */}
-                        <p className="mt-1 line-clamp-2 min-h-[30px] sm:min-h-[38px] text-[10.5px] sm:text-xs leading-[1.5] sm:leading-[1.65] text-muted break-words">
+                        <p className="sf-product-description">
                           {p.description}
                         </p>
 
                         {/* Tag gợi ý tùy chọn size / topping */}
                         {/* {hasOptions && (
                           <div className="mt-1.5 flex items-center gap-1 rounded-md bg-blue-light px-1.5 py-0.5 text-[9px] sm:text-[11px] font-medium text-blue w-fit max-w-full">
-                            <Sparkles
+                            <StorefrontIcon name="sparkles"
                               size={10}
                               className="shrink-0 text-blue"
                             />
@@ -623,7 +605,7 @@ export function Storefront({
                                 ? "Có size & topping"
                                 : "Thêm topping"}
                             </span>
-                            <ArrowUpRight
+                            <StorefrontIcon name="arrow-up-right"
                               size={10}
                               className="shrink-0 opacity-70 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                             />
@@ -632,7 +614,7 @@ export function Storefront({
                       </div>
 
                       {/* Chân card: Giá & Nút chọn món */}
-                      <div className="mt-2.5 sm:mt-3.5 flex items-center justify-between gap-1.5 border-t border-line/60 pt-2 sm:pt-2.5">
+                      <div className="sf-product-footer">
                         <div className="min-w-0 flex-1">
                           {p.sizes?.length ? (
                             <span className="block text-[8.5px] sm:text-[11px] text-muted leading-tight">
@@ -640,10 +622,10 @@ export function Storefront({
                             </span>
                           ) : null}
                           <div className="flex items-baseline gap-0.5 flex-wrap sm:flex-nowrap">
-                            <strong className="font-sans text-[14px] sm:text-[18px] font-bold tracking-tight text-ink whitespace-nowrap">
+                            <strong className="sf-price">
                               {money(minPrice)}
                             </strong>
-                            <span className="text-[9.5px] sm:text-xs font-normal text-muted truncate max-w-[50px] sm:max-w-none">
+                            <span className="sf-unit">
                               /{p.unit}
                             </span>
                           </div>
@@ -658,9 +640,9 @@ export function Storefront({
                             setSelected(p);
                           }}
                           aria-label={`Chọn ${p.name}`}
-                          className="rounded-button flex size-8 md:h-9 md:w-auto md:px-3 items-center justify-center gap-1 bg-brand text-white shadow-xs transition-[transform,box-shadow,filter] duration-200 enabled:hover:brightness-95 group-hover:shadow-sm active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 shrink-0 cursor-pointer"
+                          className="sf-choose"
                         >
-                          <ShoppingCartPlus size={13} strokeWidth={2.5} />
+                          <StorefrontIcon name="shopping-cart-plus" size={13} strokeWidth={2.5} />
                           <span className="hidden md:inline text-xs font-semibold">
                             Chọn món
                           </span>
@@ -673,23 +655,23 @@ export function Storefront({
             </div>
           )}
         </section>
-        <div className="mx-auto max-w-[1440px] px-[5.5vw] mb-[60px] mobile:px-3 mobile:mb-[30px]">
+        <div className="sf-delivery">
           <DeliveryPolicy title="Tiệm giao đến bạn" headingLevel={2} />
         </div>
       </main>
       <footer
         id="contact"
-        className="border-t border-line bg-paper/60 px-[5.5vw] pt-9 pb-11 wide:px-[max(5.5vw,calc((100vw-1280px)/2))] mobile:px-4 mobile:pt-7 mobile:pb-[66px]"
+        className="sf-footer"
       >
-        <div className="mx-auto flex flex-col justify-between gap-8 md:flex-row tablet:gap-6 mobile:flex-col mobile:gap-7">
+        <div className="sf-footer-columns">
           {/* Cột 1: Thông tin tiệm & Bản đồ */}
           <div className="flex flex-col items-start max-w-[340px]">
             <a
-              className="inline-flex items-center gap-2.5 font-serif text-[26px] text-ink hover:text-blue transition-colors"
+              className="sf-footer-brand"
               href="#"
             >
               <span>{settings.name}</span>
-              <Droplet size={22} className="text-blue" />
+              <StorefrontIcon name="droplet" size={22} className="text-blue" />
             </a>
             <p className="mt-1 text-xs text-muted leading-relaxed">
               {settings.tagline}
@@ -700,12 +682,12 @@ export function Storefront({
                   href={mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group/addr inline-flex items-start gap-1.5 text-xs font-semibold text-blue hover:text-blue transition-colors"
+                  className="group/addr sf-address"
                   title={`Mở Google Maps: ${address}`}
                 >
-                  <MapPin
+                  <StorefrontIcon name="map-pin"
                     size={14}
-                    className="mt-0.5 shrink-0 text-blue group-hover/addr:scale-110 transition-transform"
+                    className="sf-address-pin"
                   />
                   <span className="leading-snug">{address}</span>
                 </a>
@@ -724,9 +706,9 @@ export function Storefront({
             {settings.phone ? (
               <a
                 href={`tel:${settings.phone}`}
-                className="inline-flex items-center gap-2 rounded-button border border-line bg-paper-light px-3.5 py-2 text-xs font-medium text-ink hover:border-blue/40 hover:text-blue hover:shadow-xs transition-all active:scale-[0.98]"
+                className="sf-phone"
               >
-                <Phone size={14} className="text-blue" />
+                <StorefrontIcon name="phone" size={14} className="text-blue" />
                 <span>
                   Gọi tiệm: <strong>{settings.phone}</strong>
                 </span>
@@ -734,8 +716,8 @@ export function Storefront({
             ) : null}
 
             {settings.deliveryNote && (
-              <div className="flex items-start gap-2 rounded-lg bg-blue-light/50 p-2.5 text-[11px] text-blue-dark leading-snug">
-                <Truck size={14} className="mt-0.5 shrink-0 text-blue" />
+              <div className="sf-delivery-note">
+                <StorefrontIcon name="truck" size={14} className="mt-0.5 shrink-0 text-blue" />
                 <span>{settings.deliveryNote}</span>
               </div>
             )}
@@ -743,37 +725,37 @@ export function Storefront({
 
           {/* Cột 3: Hỗ trợ & Theo dõi đơn */}
           <div className="flex flex-col items-start gap-2 md:items-end">
-            <span className="text-[11px] font-semibold tracking-wider text-muted uppercase mb-1 md:self-end">
+            <span className="sf-utilities-label">
               Tiện ích
             </span>
             <button
               type="button"
-              className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-9 px-3 inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink hover:bg-paper-light border border-transparent hover:border-line"
+              className="sf-utility-button"
               onClick={() => setModal("tour")}
             >
-              <HelpCircle size={15} className="text-blue" /> Hướng dẫn đặt hàng
+              <StorefrontIcon name="help-circle" size={15} className="text-blue" /> Hướng dẫn đặt hàng
             </button>
             <button
               type="button"
-              className="rounded-button cursor-pointer overflow-hidden select-none transition-[transform,scale,translate,box-shadow,background-color,border-color,filter,opacity] duration-150 disabled:cursor-not-allowed disabled:opacity-45 touch-manipulation [-webkit-tap-highlight-color:transparent] relative enabled:active:scale-[.96] enabled:active:translate-y-px h-9 px-3 inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink hover:bg-paper-light border border-transparent hover:border-line"
+              className="sf-utility-button"
               onClick={() => {
                 setNewOrder(undefined);
                 setModal("orders");
               }}
             >
-              <Clock3 size={15} className="text-blue" /> Theo dõi đơn của tôi
+              <StorefrontIcon name="clock-3" size={15} className="text-blue" /> Theo dõi đơn của tôi
             </button>
             <small className="mt-4 text-[11px] text-muted md:text-right">
               © {new Date().getFullYear()} {settings.name}. Mọi quyền được bảo
               lưu.
             </small>
             <nav aria-label="Thông tin về tiệm" className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-muted">
-              {productPageLinks.map((page) => <Link key={page.path} href={page.path} prefetch={false} className="hover:text-blue">{page.label}</Link>)}
-              <Link href="/about" prefetch={false} className="hover:text-blue">Giới thiệu & cách đặt hàng</Link>
-              <Link href="/contact" prefetch={false} className="hover:text-blue">Liên hệ</Link>
-              <Link href="/privacy" prefetch={false} className="hover:text-blue">Quyền riêng tư</Link>
+              {productPageLinks.map((page) => <a key={page.path} href={page.path} className="hover:text-blue">{page.label}</a>)}
             </nav>
           </div>
+        </div>
+        <div className="mx-auto max-w-[1440px]">
+          <PolicyLinks />
         </div>
       </footer>
       <FloatingFooter

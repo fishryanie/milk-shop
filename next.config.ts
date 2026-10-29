@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { networkInterfaces } from "node:os";
+import { storefrontDeviceSizes, storefrontImageQuality, storefrontImageSizes } from "./lib/storefront-image-config";
 
 // Wi-Fi addresses can change. Allow only this machine's current IPv4 hosts
 // for development assets instead of keeping a stale, hard-coded LAN address.
@@ -17,10 +18,20 @@ const config: NextConfig = {
   ],
   poweredByHeader: false,
   images: {
+    formats: ["image/avif", "image/webp"],
+    qualities: [storefrontImageQuality, 75],
+    imageSizes: storefrontImageSizes,
+    deviceSizes: storefrontDeviceSizes,
     remotePatterns: [{ protocol: "https", hostname: "**" }],
     localPatterns: [{ pathname: "/media/**" }, { pathname: "/**", search: "" }],
   },
   serverExternalPackages: ["mongodb", "sharp"],
+  async redirects() {
+    return [
+      { source: "/about-us", destination: "/about", permanent: true },
+      { source: "/privacy-policy", destination: "/privacy", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

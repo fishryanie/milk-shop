@@ -91,6 +91,9 @@ export function Modal({
     const oldX = body.style.getPropertyValue("--scroll-lock-x");
     const oldY = body.style.getPropertyValue("--scroll-lock-y");
     let frame = 0;
+    let fieldFrame = 0;
+    let sheetHeight: number | undefined;
+    let sheetOffset: number | undefined;
     const viewport = window.visualViewport;
     const keepFieldVisible = () => {
       const field = document.activeElement;
@@ -112,21 +115,30 @@ export function Modal({
       else if (fieldBounds.top < bounds.top + padding)
         scroll.scrollTop -= bounds.top - fieldBounds.top + padding;
     };
-    const resize = () => {
+    const updateViewport = () => {
+      frame = 0;
       // Pinch zoom remains available; only follow an unzoomed visual viewport.
       if (viewport && Math.abs(viewport.scale - 1) > 0.05) return;
       const height = viewport?.height ?? window.innerHeight;
       const offset = Math.max(0, window.innerHeight - height - (viewport?.offsetTop ?? 0));
-      dialog?.setAttribute("data-compact", String(height < 540));
-      dialog?.style.setProperty("--sheet-height", `${height}px`);
-      dialog?.style.setProperty(
-        "--sheet-offset",
-        `${offset}px`,
-      );
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(keepFieldVisible);
+      if (height !== sheetHeight) {
+        dialog?.setAttribute("data-compact", String(height < 540));
+        dialog?.style.setProperty("--sheet-height", `${height}px`);
+        sheetHeight = height;
+      }
+      if (offset !== sheetOffset) {
+        dialog?.style.setProperty("--sheet-offset", `${offset}px`);
+        sheetOffset = offset;
+      }
+      // Measure fields on the frame after viewport styles have been laid out.
+      cancelAnimationFrame(fieldFrame);
+      fieldFrame = requestAnimationFrame(keepFieldVisible);
     };
-    resize();
+    const resize = () => {
+      // Keyboard, focus and visualViewport events often arrive together.
+      if (!frame) frame = requestAnimationFrame(updateViewport);
+    };
+    updateViewport();
     body.style.setProperty("--scroll-lock-x", `${-scrollX}px`);
     body.style.setProperty("--scroll-lock-y", `${-scrollY}px`);
     body.classList.add(...addedClasses);
@@ -145,6 +157,7 @@ export function Modal({
     return () => {
       cancelAnimationFrame(enterFrame);
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(fieldFrame);
       viewport?.removeEventListener("resize", resize);
       viewport?.removeEventListener("scroll", resize);
       window.removeEventListener("resize", resize);

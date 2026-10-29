@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { indexablePages, productPageLinks, SITE_URL } from "@/lib/site-content";
+import { indexablePages, pageDefinitions, productPageLinks, SITE_NAME, SITE_TITLE, SITE_URL, type InfoPath } from "@/lib/site-content";
+import { markdownAliases } from "@/lib/markdown";
 
 // Run against `next start` or a deployed preview. No orders are created.
 const base = process.env.AGENT_TEST_BASE_URL;
@@ -27,7 +28,8 @@ describe.skipIf(!base)("public agent readiness HTTP contracts", () => {
           expect(
             response.headers.get("Vary")?.toLowerCase().split(/,\s*/),
           ).toContain("accept");
-          expect(body).toStartWith("# ");
+          const title = path === "/" ? SITE_TITLE : pageDefinitions[path as InfoPath].title;
+          expect(body).toStartWith(`# ${title}\n`);
           expect(body).not.toContain("<html");
           expect(body).toContain(`${SITE_URL}/llms.txt`);
           expect(response.headers.get("Cache-Control")).toContain("no-store");
@@ -45,6 +47,10 @@ describe.skipIf(!base)("public agent readiness HTTP contracts", () => {
           );
           expect(textContent(body).length).toBeGreaterThan(500);
         }
+        const head = await read(path, type, "HEAD");
+        expect(head.status).toBe(200);
+        expect(head.headers.get("Content-Type")).toContain(type);
+        expect(await head.text()).toBe("");
       }
     },
     15000,
@@ -52,8 +58,15 @@ describe.skipIf(!base)("public agent readiness HTTP contracts", () => {
 
   test("raw homepage keeps identity, schema and links to detailed information", async () => {
     const html = await (await read("/")).text();
-    const text = textContent(html);
+    // Measure body prose, including the useful no-JS ordering fallback. Exclude
+    // metadata, scripts, styles and decorative SVG content from the numerator.
+    const body = html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i)![1];
+    const text = textContent(body.replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, ""));
     expect(text.length).toBeGreaterThan(500);
+    expect(text.length / html.length).toBeGreaterThanOrEqual(0.05);
+    const fallback = html.match(/<noscript>([\s\S]*?)<\/noscript>/)![1];
+    expect(textContent(fallback).length).toBeGreaterThan(1000);
+    expect(fallback).toContain('href="tel:');
     expect(text).not.toContain("Chọn món và theo dõi đơn hàng");
     expect(text).not.toContain("Giao hàng quanh tiệm và hỗ trợ trực tiếp");
     expect(html).toContain('href="/about"');
@@ -61,6 +74,11 @@ describe.skipIf(!base)("public agent readiness HTTP contracts", () => {
     expect(html).toContain('property="og:type" content="website"');
     expect(html).toContain('property="og:image"');
     expect(html).toMatch(/<title>Cái Tiệm Sữa[^<]*sữa tuyết/i);
+    expect(html).toContain(`<title>${SITE_TITLE.replace(/&/g, "&amp;")}</title>`);
+    const h1 = textContent(html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)![1]);
+    expect(h1).toContain(SITE_NAME);
+    expect(h1).toContain("Sữa tuyết Vân Nam");
+    expect(html).not.toMatch(/<meta name="robots" content="[^"]*noindex/);
     for (const page of productPageLinks)
       expect(html).toContain(`href="${page.path}"`);
     const headings = [...html.matchAll(/<h([1-6])\b/g)].map((match) =>
@@ -81,7 +99,63 @@ describe.skipIf(!base)("public agent readiness HTTP contracts", () => {
     expect(schema.contactPoint.telephone).toBeTruthy();
     expect(schema.address["@type"]).toBe("PostalAddress");
     expect(schema.address.streetAddress).toBeTruthy();
+    const schemas = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
+      .map((match) => JSON.parse(match[1]));
+    const website = schemas.find((item) => item["@type"] === "WebSite");
+    expect(website.name).toBe(SITE_NAME);
+    expect(website.url).toBe(`${SITE_URL}/`);
+    expect(website.publisher["@id"]).toBe(schema["@id"]);
   });
+
+  test("all homepage SVG references resolve to the shared image asset", async () => {
+    const html = await (await read("/")).text();
+    const references = [...html.matchAll(/<use href="(\/icons\/storefront\.svg)#([^"]+)"/g)];
+    expect(references.length).toBeGreaterThan(20);
+    const response = await read("/icons/storefront.svg", "image/svg+xml");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toContain("image/svg+xml");
+    const svg = await response.text();
+    expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
+    expect(svg).not.toMatch(/<script|<foreignObject|\bon\w+=/i);
+    for (const [, , id] of references) expect(svg).toContain(`<symbol id="${id}"`);
+    const head = await read("/icons/storefront.svg", "image/svg+xml", "HEAD");
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe("");
+  });
+
+  test("manifest, internal Markdown handler and read-only shopping endpoints keep their contracts", async () => {
+    const response = await read("/manifest.webmanifest", "*/*");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toContain("application/manifest+json");
+    const manifest = await response.json();
+    expect(manifest.name).toBe(SITE_NAME);
+    expect(manifest.start_url).toBe("/");
+    for (const icon of manifest.icons) {
+      const image = await read(icon.src, "image/*");
+      expect(image.status).toBe(200);
+      expect(image.headers.get("Content-Type")).toBe(icon.type);
+      expect((await image.arrayBuffer()).byteLength).toBeGreaterThan(0);
+    }
+    for (const path of indexablePages) {
+      const markdown = await read(`/agent-markdown?document=${encodeURIComponent(path)}`, "text/markdown");
+      expect(markdown.status).toBe(200);
+      expect(markdown.headers.get("Content-Type")).toContain("text/markdown");
+      expect(await markdown.text()).toStartWith("# ");
+    }
+    const missing = await read("/agent-markdown?document=/missing", "text/markdown");
+    expect(missing.status).toBe(404);
+    expect(await missing.text()).toContain(`${SITE_URL}/llms.txt`);
+    for (const [path, status] of [
+      ["/api/cart", 405],
+      ["/api/orders", 200],
+      ["/api/orders/000000000000000000000000", 401],
+      ["/api/orders/000000000000000000000000/receipt", 405],
+    ] as const) {
+      const result = await read(path);
+      expect(result.status).toBe(status);
+      await result.arrayBuffer();
+    }
+  }, 15000);
 
   test("Accept weights, exclusions, unsupported types and successive variants work", async () => {
     for (const [accept, type, status] of [
@@ -133,13 +207,14 @@ describe.skipIf(!base)("public agent readiness HTTP contracts", () => {
   });
 
   test("Markdown aliases and llms.txt supply valid linked guidance", async () => {
-    for (const path of indexablePages.map((path) =>
-      path === "/" ? "/index.md" : `${path}.md`,
-    )) {
+    for (const [path, canonical] of Object.entries(markdownAliases)) {
       const response = await read(path, "*/*");
       expect(response.status).toBe(200);
       expect(response.headers.get("Content-Type")).toContain("text/markdown");
-      expect(await response.text()).toStartWith("# ");
+      const title = canonical === "/" ? SITE_TITLE : pageDefinitions[canonical as InfoPath].title;
+      expect(await response.text()).toStartWith(`# ${title}\n`);
+      expect(response.headers.get("Link")).toContain(`<${SITE_URL}${canonical}>; rel="canonical"`);
+      expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
     }
     const llms = await read("/llms.txt", "*/*");
     expect(llms.status).toBe(200);
